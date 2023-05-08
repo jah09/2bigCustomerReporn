@@ -374,6 +374,7 @@ export default function RewardScreen({ navigation }) {
   const [couponUsedDisable, setcouponUsedDisable] = useState(true);
   //function to use the coupon then subtract to the final total amount
   const couponUseFunction = (item) => {
+    {/* Test only here if ma upload ba sa git */}
     const couponID = item.promoId; //ID of the coupon
     const couponUsed = "alreadyUsed"; //track if the coupon is used or not
     const customerPointsRef = ref(db, `CUSTOMER/${customerID}`); //get the db reference
