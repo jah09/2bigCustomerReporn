@@ -21,13 +21,14 @@ import { MaterialIcons } from "@expo/vector-icons";
 export default function NewDeliveryAddressScreen({ navigation }) {
   //receive the passedStation from other screen
   const route = useRoute();
-  const { passedStationName, extractedDatas, item, selectedItem ,passedTotalAmount,FinalTotalAmount} =
+  const { passedStationName, extractedDatas, item, selectedItem ,passedTotalAmount,FinalTotalAmount,
+    selectedpaymenthod,rewardScreenNewModeOfPayment} =
     route.params ?? {
       passedStationName: null,
       passedTotalAmount
     };
     console.log("line 29 new delivery add screen",typeof passedTotalAmount, passedTotalAmount,typeof FinalTotalAmount,FinalTotalAmount)
-
+  console.log("Receive new delivery address",selectedpaymenthod)
   //button disable
 
   const onPresshandler_toStationPage = () => {
@@ -77,16 +78,19 @@ export default function NewDeliveryAddressScreen({ navigation }) {
       setnewDeliveryAddress(null)
       setnewDeliveryAddressaLatitude(null);
       setnewDeliveryAddressaLongitude(null);
-      Alert.alert("Notice", "Thank you", [
+      Alert.alert("Delivery address confirmed", "Thank you", [
         {
           text: "OK",
           onPress: () => {
-            console.log("same as home",passedTotalAmount,FinalTotalAmount)
+           // console.log("same as home",passedTotalAmount,FinalTotalAmount)
+            //console.log("same as home send to cart screen",selectedpaymenthod)
             navigation.navigate("CartScreen", {
               combinedData,
               extractedDatas,
               selectedItem,
-              passedTotalAmount:parseFloat(passedTotalAmount)  || FinalTotalAmount
+              passedTotalAmount:parseFloat(passedTotalAmount)  || FinalTotalAmount,
+              rewardScreenNewModeOfPayment,
+              selectedpaymenthod
             });
           },
         },
@@ -104,17 +108,20 @@ export default function NewDeliveryAddressScreen({ navigation }) {
         alert("Please enter a valid number.");
         return;
       } else {
-        Alert.alert("Notice", "Thank you", [
+        Alert.alert("Delivery address confirmed", "Thank you", [
           {
             text: "OK",
             onPress: () => {
-              console.log("new delivery add",passedTotalAmount,FinalTotalAmount)
+              //console.log("newdelivery add send to cart screen",selectedpaymenthod)
+             // console.log("new delivery add",passedTotalAmount,FinalTotalAmount)
               navigation.navigate("CartScreen", {
                 combinedData,
                 extractedDatas,
                 selectedItem,
                 deliveryAddressOption,
-                passedTotalAmount:parseFloat(passedTotalAmount) || FinalTotalAmount
+                passedTotalAmount:parseFloat(passedTotalAmount) || FinalTotalAmount,
+                rewardScreenNewModeOfPayment,
+                selectedpaymenthod
 
               });
             },
@@ -180,13 +187,13 @@ export default function NewDeliveryAddressScreen({ navigation }) {
                     <View
                       key={item.key}
                       style={{
-                        //  backgroundColor: "red",
+                       //  backgroundColor: "red",
                         marginTop: 20,
                         height: 25,
                         borderRadius: 5,
                         padding: 0,
                         flexDirection: "row",
-                        width: 150,
+                        width: 160,
                       }}
                     >
                       <TouchableOpacity
@@ -212,7 +219,7 @@ export default function NewDeliveryAddressScreen({ navigation }) {
                       <Text
                         style={{
                           fontFamily: "nunito-light",
-                          fontSize: 16,
+                          fontSize: 18,
                           flexDirection: "row",
                         }}
                       >
@@ -482,8 +489,8 @@ const styles = StyleSheet.create({
     height: 600,
   },
   checkbox: {
-    width: 18,
-    height: 18,
+    width: 20,
+    height: 20,
     borderWidth: 1,
     borderRadius: 4,
     justifyContent: "center",

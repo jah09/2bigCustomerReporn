@@ -8,6 +8,7 @@ import {
   Keyboard,
   ScrollView,
   SafeAreaView,
+  Dimensions
 } from "react-native";
 import customStatusBar from "../shared/customStatusBar";
 import React, { useState, useEffect } from "react";
@@ -26,12 +27,14 @@ import {
   equalTo,
   onValue,
   set,
+  get
 } from "firebase/database";
-import { StatusBar } from "expo-status-bar";
+
 
 //import { onValue, push, set } from "firebase/database";
 
 export default function LoginModule({ navigation, route }) {
+  
   const onPressHandler_forCreateAccount = () => {
     // navigation.navigate('CreateAccount');
     navigation.navigate("CreateAccount");
@@ -80,76 +83,70 @@ export default function LoginModule({ navigation, route }) {
   }, []);
 
   const [currentDate, setCurrentDate] = useState("");
-  const handleLogin = () => {
-    const auth = getAuth();
-    console.log(auth);
-    signInWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
-        const user = userCredential.user;
-        console.log("Logged in with:", user.email);
-
-        const customerRef = ref(db, "CUSTOMER");
-        const customerQuery = query(
-          customerRef,
-          orderByChild("email"),
-          equalTo(email)
-        );
-
-        onValue(
-          customerQuery,
-          (snapshot) => {
-            if (snapshot.exists()) {
-              const customerData =
-                snapshot.val()[Object.keys(snapshot.val())[0]];
-
-              setCusData(customerData);
-             
-              AsyncStorage.setItem("customerData", JSON.stringify(customerData))
-                .then(() => {
-                  navigation.navigate("TabNavigator");
-                })
-                .catch((error) => {
-                  console.log(error);
-                  alert("Error saving data: ", error);
-                });
-                
-
-            } else {
-              alert("No customer found with this email");
-            }
-          },
-          
-          {
-            error: (error) => {
-              console.log(error);
-              alert("Error fetching data: ", error);
-            },
-          }
-        );
-      })
-      .catch((error) => alert("Please check your email and password."));
-
-      // const action = "Login";
-      // const customerId=custData.cusId;
-      // console.log("line 117",customerId);
-      // const userLogRandomId = Math.floor(Math.random() * 50000) + 10000;
-      // const newUserlogKey = userLogRandomId;
-      // set(ref(db, `CUSTOMERSLOG/${newUserlogKey}`), {
-      //   customerLogID:newUserlogKey,
-      //   cusId: customerId,
-      //   loginDate: currentDate,
-      //   actionPerformed: action,
-      // })
-      //   .then(async () => {
-      //     // console.log('Test if Save to db-----'+reservationDate );
-      //     console.log("Login screen -->New UserLog with the User ID of--->", newUserlogKey);
-      //   })
-      //   .catch((error) => {
-      //     console.log("Error Saving to Database", error);
-      //     alert("Error", JSON.stringify(error), "OK");
-      //   });
+  const handleLogin = async () => {
+    try {
+      const auth = getAuth();
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      console.log("Logged in with:", user.email);
+  
+      const customerData = await fetchCustomerData(email);
+      if (customerData) {
+        await storeCustomerData(customerData);
+        await logCustomerLogin(email);
+        navigation.navigate("TabNavigator");
+      } else {
+        alert("No customer found with this email");
+      }
+    } catch (error) {
+      console.log(error);
+      alert("Please check your email and password.");
+    }
   };
-
+  
+  const fetchCustomerData = async (email) => {
+    const customerRef = ref(db, "CUSTOMER");
+    const customerQuery = query(
+      customerRef,
+      orderByChild("email"),
+      equalTo(email)
+    );
+    const snapshot = await get(customerQuery);
+    if (snapshot.exists()) {
+      return snapshot.val()[Object.keys(snapshot.val())[0]];
+    } else {
+      return null;
+    }
+  };
+  
+  const storeCustomerData = async (customerData) => {
+    try {
+      await AsyncStorage.setItem("customerData", JSON.stringify(customerData));
+    } catch (error) {
+      console.log(error);
+      alert("Error saving data: ", error);
+    }
+  };
+  
+  const logCustomerLogin = async (email) => {
+    const userLogId = Math.floor(Math.random() * 50000) + 100000;
+    const newUserLog = userLogId;
+    const logRef = ref(db, `CUSTOMERSLOG/${newUserLog}`);
+    const currentDate = new Date().toISOString();
+    const logData = {
+      dateLogin: currentDate,
+      email: email,
+      action: "login",
+    };
+    try {
+      await set(logRef, logData);
+      console.log("New:", newUserLog);
+    } catch (error) {
+      console.log(error);
+      alert("Error saving data: ", error);
+    }
+  };
+  
   // function to clear login credentials from local storage
 
   return (

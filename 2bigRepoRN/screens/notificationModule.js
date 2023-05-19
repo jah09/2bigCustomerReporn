@@ -32,9 +32,10 @@ export default function NotificationScreen() {
   console.log("111unreadCount:", unreadCount);
   const navigation = useNavigation();
 
- 
+  
 
   useEffect(() => {
+
     async function fetchNotifications() {
       const customerData = JSON.parse(await AsyncStorage.getItem("customerData"));
       if (customerData) {
@@ -114,11 +115,65 @@ export default function NotificationScreen() {
       setReadNotifications(readNotifications.filter((notification) => notification.notificationID !== notificationID));
     }
   };
+  const handleClickMarkAll = async () => {
+    const customerData = JSON.parse(await AsyncStorage.getItem("customerData"));
+    if (customerData) {
+      const customerId = customerData.cusId;
+      const notificationsRef = ref(db, "NOTIFICATION/");
+      const notificationsQuery = query(
+        notificationsRef,
+        orderByChild("cusId"),
+        equalTo(customerId)
+      );
+      onValue(
+        notificationsQuery,
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            const NotifInformation = Object.keys(data)
+              .map((key) => ({
+                id: key,
+                ...data[key],
+              }))
+              .filter((notification) => notification.receiver === "Customer");
+            setNotifications(NotifInformation);
+            setReadNotifications(
+              NotifInformation.filter(
+                (notification) => notification.status === "read"
+              )
+            );
+            const unreadNotifications = NotifInformation.filter(
+              (notification) => notification.status === "unread"
+            );
+            
+            // Update the status of all unread notifications to "read"
+            unreadNotifications.forEach(async (notification) => {
+              const notificationRef = ref(db, `NOTIFICATION/${notification.id}`);
+              await update(notificationRef, { status: "read" });
+            });
+            
+            // Update the unread count in the state to 0
+            updateUnreadCount(0);
+          }
+        },
+        (error) => {
+          console.error(error);
+        }
+      );
+    }
+  };
+  
+
   return (
     <SafeAreaView style={styles.container}>
       {notifications.length > 0 ? (
         <ScrollView>
           <Text style={styles.text1}>Notifications</Text>
+          <View style={{marginLeft:220}}> 
+          <TouchableOpacity onPress={handleClickMarkAll}>
+                  <Text style={styles.text3}> Mark all as read</Text>
+                </TouchableOpacity>
+          </View>
           {notifications
   .sort((a, b) => new Date(b.notificationDate) - new Date(a.notificationDate))
   .map((notification) => (
@@ -211,6 +266,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
    
   },
+  text3:{
+    color:"blue",
+    textDecorationLine:"underline",
+   },
   deleteButton: {
     backgroundColor: "black",
     marginTop: 5,

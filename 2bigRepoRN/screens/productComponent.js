@@ -10,6 +10,7 @@ import {
   Modal,
   TextInput,
   Alert,
+  Pressable,
 } from "react-native";
 import React, {
   useState,
@@ -18,12 +19,14 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
+
 import { MaterialIcons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { AntDesign } from "@expo/vector-icons";
 import { useRoute } from "@react-navigation/native";
 import { globalStyles } from "../ForStyle/GlobalStyles";
 import { db } from "../firebaseConfig";
+import { debounce } from "lodash";
 import { FontAwesome } from "@expo/vector-icons";
 import {
   ref,
@@ -32,11 +35,16 @@ import {
   orderByChild,
   equalTo,
   get,
+  off,
 } from "firebase/database";
 import moment from "moment/moment";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { select } from "@react-native-material/core";
+import {
+  responsiveHeight,
+  responsiveWidth,
+} from "react-native-responsive-dimensions";
 export default function ProductComponent() {
   const route = useRoute();
   const { item } = route.params ?? null; //receive the variable passed by parameter "item", from other screen.
@@ -84,14 +92,14 @@ export default function ProductComponent() {
         console.log(error);
         alert("Error fetching data: ", error);
       });
-  });
+  }, []);
   const [customerData, setCustomerData] = useState([]);
 
   const [productData, setproductData] = useState();
-  //console.log("Products Data",productData);
+  // console.log("Products Data",productData);
   const [updateTankSupply, setUpdateTankSupply] = useState();
   //get current date
-  useLayoutEffect(() => {
+  useEffect(() => {
     const functionsetCurrentDate = () => {
       const today = new Date();
       const year = today.getFullYear();
@@ -117,21 +125,21 @@ export default function ProductComponent() {
       equalTo(selectedStationID)
     );
 
-    const handleOthersProductsData = (snapshot) => {
-      const productsData = [];
-      snapshot.forEach((tanksuppSnapshot) => {
-        const prodData = tanksuppSnapshot.val();
-        productsData.push(prodData);
-      });
-      //console.log("line 164",prodData)
-      // setOtherProducts(productsData);
-    };
+    // const handleOthersProductsData = (snapshot) => {
+    //   const productsData = [];
+    //   snapshot.forEach((tanksuppSnapshot) => {
+    //     const prodData = tanksuppSnapshot.val();
+    //     productsData.push(prodData);
+    //   });
+    //   //console.log("line 164",prodData)
+    //   // setOtherProducts(productsData);
+    // };
 
-    onValue(otherTanksupplyQuery, (snapshot) => {
+    const unsubscribe = onValue(otherTanksupplyQuery, (snapshot) => {
       // console.log("PRODUCT SCREEN---tst", otherProductsQuery);
       const data = snapshot.val();
       //console.log("line 180",data);
-      if (data) {
+      if (data && Object.keys(data).length > 0) {
         const otherProductsInfo = Object.keys(data).map((key) => ({
           id: key,
           ...data[key],
@@ -149,17 +157,17 @@ export default function ProductComponent() {
 
           return updatedMoment.isSameOrAfter(currentDateMoment, "day");
         });
-        //  console.log("tank supply", filteredTankSupp);
+        // console.log("tank supply", filteredTankSupp);
         setTankSupply(filteredTankSupp);
       }
     });
+    return () => unsubscribe();
   }, [selectedStationID, currentDate]);
 
   const [tankSupply, setTankSupply] = useState();
 
-  const [otherProducts, setOtherProducts] = useState();
-
-  //console.log("line 153",imageUrl);
+  const [thirdPartyProducts, setthirdPartyProducts] = useState();
+  //console.log("thirdPartyProducts",thirdPartyProducts);
 
   //retreive productRefill
   useEffect(() => {
@@ -170,7 +178,7 @@ export default function ProductComponent() {
       equalTo(selectedStationID)
     );
 
-    onValue(productsQuery, (snapshot) => {
+    const unsubscribe = onValue(productsQuery, (snapshot) => {
       //  console.log("PRODUCT SCREEN---tst", productsQuery);
 
       const data = snapshot.val();
@@ -183,97 +191,119 @@ export default function ProductComponent() {
         // console.log("Product data is ",productRefillInfo);
 
         setproductData(productRefillInfo);
-      }
-      else{
-      //  console.log("No data at the moment- Product refill useEffect")
+      } else {
+        //  console.log("No data at the moment- Product refill useEffect")
       }
     });
+    return () => unsubscribe(); // unsubscribe when component unmounts
   }, [selectedStationID]);
+
   const [imageUrl, setImageUrl] = useState(null);
   useEffect(() => {
     if (productData && productData.length > 0 && productData[0].pro_Image) {
       setImageUrl(productData[0].pro_Image); // Set the image URL to the first product's pro_Image
+      //console.log("line 201", productData[0].pro_Image);
     }
   }, [productData]);
 
   //retreive otherProduct
-  useEffect(() => {
-    const otherProducts = ref(db, "otherPRODUCTS/");
-    const otherProductsQuery = query(
-      otherProducts,
+  useLayoutEffect(() => {
+    const thirdPartyProductsRef = ref(db, "thirdparty_PRODUCTS/");
+    const thirdPartyProductsQuery = query(
+      thirdPartyProductsRef,
       orderByChild("adminId"),
       equalTo(selectedStationID)
     );
 
-    const handleOthersProductsData = (snapshot) => {
-      const productsData = [];
-      snapshot.forEach((tanksuppSnapshot) => {
-        const prodData = tanksuppSnapshot.val();
-        productsData.push(prodData);
-      });
-      setOtherProducts(productsData);
-    };
+    // const handleOthersProductsData = (snapshot) => {
+    //   const productsData = [];
+    //   snapshot.forEach((tanksuppSnapshot) => {
+    //     const prodData = tanksuppSnapshot.val();
+    //     productsData.push(prodData);
+    //   });
+    //   setOtherProducts(productsData);
+    // };
 
-    onValue(otherProductsQuery, (snapshot) => {
+    const unsubscribe = onValue(thirdPartyProductsQuery, (snapshot) => {
       // console.log("PRODUCT SCREEN---tst", otherProductsQuery);
       const data = snapshot.val();
-      if (data) {
-        const otherProductsInfo = Object.keys(data).map((key) => ({
+      if (data && Object.keys(data).length > 0) {
+        const thirdPartyProductsInformation = Object.keys(data).map((key) => ({
           id: key,
           other_productImage: data[key].other_productImage,
           ...data[key],
         }));
-        setOtherProducts(otherProductsInfo);
-      }
-      else{
-       // console.log("No data at the moment- Product refill useEffect")
+        setthirdPartyProducts(thirdPartyProductsInformation);
+        //  console.log("line 233", thirdPartyProductsInformation);
+      } else {
+        // console.log("No data at the moment- Product refill useEffect")
       }
     });
+    return () => unsubscribe();
   }, [selectedStationID]);
-  const [otherproductImageURL, setotherProductImageURL] = useState(null);
+  const [thirdPartyProdsImage, setotherProductImageURL] = useState(null);
   useEffect(() => {
     if (
-      otherProducts &&
-      otherProducts.length > 0 &&
-      otherProducts[0].other_productImage
+      thirdPartyProducts &&
+      thirdPartyProducts.length > 0 &&
+      thirdPartyProducts[0].thirdparty_productImage
     ) {
-      setotherProductImageURL(otherProducts[0].other_productImage); // Set the image URL to the first product's pro_Image
+      setotherProductImageURL(thirdPartyProducts[0].thirdparty_productImage); // Set the image URL to the first product's pro_Image
     }
-  }, [otherProducts]);
+  }, [thirdPartyProducts]);
+
+  // const debouncedSetStoreRatings = useCallback(
+  //   debounce((data) => {
+  //     setStoreRatings(data);
+  //   }, 500),
+  //   []
+  // );
 
   //store rEview collection
-  useLayoutEffect(() => {
-    const storeReviewRef = ref(db, "STOREREVIEW/");
+  // useEffect(() => {
+  //   const storeReviewRef = ref(db, "STOREREVIEW/");
+  //   //console.log("Test",storeReviewRef)
+  //   const storeReviewQuery = query(
+  //     storeReviewRef,
+  //     orderByChild("adminID"),
+  //     equalTo(selectedStationID)
+  //   );
 
-    const storeReviewQuery = query(
-      storeReviewRef,
-      orderByChild("adminID"),
-      equalTo(selectedStationID)
-    );
+  //    // Create a debounced callback function that will update the storeRatings state
+  //    const debouncedSetStoreRatings = debounce((data) => {
+  //     setStoreRatings(data);
+  //   }, 500);
+  // //console.log("Test 256",storeReviewRef)
+  //  const listener= onValue(storeReviewQuery, (snapshot) => {
+  //     if (snapshot.exists()) {
+  //       const data = snapshot.val();
+  //       let storeReviewInfo = [];
+  //       if (data && Object.keys(data).length > 0) {
+  //         storeReviewInfo = Object.keys(data).map((key) => ({
+  //           id: key,
 
-    onValue(storeReviewQuery, (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.val();
-        let storeReviewInfo = [];
-        if (data && Object.keys(data).length > 0) {
-          storeReviewInfo = Object.keys(data).map((key) => ({
-            id: key,
+  //           ...data[key],
+  //           firstName: customerData.firstName,
+  //           lastName: customerData.lastName,
+  //         }));
+  //       }
+  //      // console.log("line 266",storeReviewInfo)
+  //      debouncedSetStoreRatings(storeReviewInfo);
 
-            ...data[key],
-            firstName: customerData.firstname,
-            lastName: customerData.lastName,
-          }));
-        }
-
-        setStoreRatings(storeReviewInfo);
-      }else{
-        //console.log("No data at the moment- Product refill useEffect")
-      }
-    });
-  }, [selectedStationID, customerData]);
+  //     }else{
+  //       setStoreRatings([]);
+  //       //console.log("No data at the moment- Product refill useEffect")
+  //     }
+  //   });
+  //  // return () => unsubscribe(); // unsubscribe when component unmounts
+  //   // Return a cleanup function that will remove the Firebase listener when the component unmounts
+  //   return () => {
+  //     off(storeReviewQuery, 'value', listener);
+  //   };
+  // }, [selectedStationID, customerData,debouncedSetStoreRatings]);
   const [storeRatings, setStoreRatings] = useState({});
 
-  //console.log("line 294",rewardsData);
+  //console.log("line 294",storeRatings);
   const [cartCount, setCartCount] = useState(0);
   const [cartquantity, setcartQuantity] = useState(cartCount);
   const [selectedItem, setSelectedItem] = useState([]);
@@ -296,6 +326,7 @@ export default function ProductComponent() {
         setSelectedItem((prevSelectedItems) => [...prevSelectedItems, item]);
       }
     },
+
     [selectedItem]
   );
 
@@ -316,18 +347,20 @@ export default function ProductComponent() {
       equalTo(selectedStationID)
     );
 
-    onValue(otherProductsQuery, (snapshot) => {
+    const unsubscribe = onValue(otherProductsQuery, (snapshot) => {
       const data = snapshot.val();
+      if (data && Object.keys(data).length > 0) {
+        const otherProductsInfo = Object.keys(data).map((key) => ({
+          id: key,
 
-      const otherProductsInfo = Object.keys(data).map((key) => ({
-        id: key,
-
-        ...data[key],
-      }));
+          ...data[key],
+        }));
+        setnewDeliveryDetails(otherProductsInfo);
+      }
 
       //console.log("test if naa data--> data from rhea",otherProductsInfo)
-      setnewDeliveryDetails(otherProductsInfo);
     });
+    return () => unsubscribe();
   }, [selectedStationID]);
   // console.log("DELIVERY DETAILS",newDeliveryDetails);
 
@@ -669,7 +702,7 @@ export default function ProductComponent() {
             {/* Submit button */}
             <View
               style={{
-                //backgroundColor: "red",
+                backgroundColor: "red",
                 marginTop: 10,
                 height: 50,
               }}
@@ -696,12 +729,7 @@ export default function ProductComponent() {
                     height: 40,
                   }}
                 >
-                  <Text
-                    style={[
-                      globalStyles.buttonText,
-                      { marginTop: 0, left: -8 },
-                    ]}
-                  >
+                  <Text style={[globalStyles.buttonText, { left: -8 }]}>
                     Submit
                   </Text>
                   <MaterialIcons
@@ -755,6 +783,7 @@ export default function ProductComponent() {
 
           <View style={styles.wrapperWaterProduct}>
             <Text style={styles.waterProdStyle}>Water Refill</Text>
+
             <FlatList
               horizontal={true}
               contentContainerStyle={{
@@ -765,12 +794,18 @@ export default function ProductComponent() {
               data={productData}
               keyExtractor={(item, index) => item.prod_refillId}
               renderItem={({ item }) => (
-                <View style={styles.viewWaterItem} key={item.id}>
+                <View
+                  style={styles.viewWaterItem_otherProduct}
+                  key={item.prod_refillId}
+                >
                   <Image
                     style={styles.waterImageStyle}
                     source={{ uri: imageUrl }}
                   />
-                  <View style={{ flexDirection: "row" }} key={item.id}>
+                  <View
+                    style={{ flexDirection: "row" }}
+                    key={item.thirdparty_productId}
+                  >
                     <Text
                       style={{
                         fontSize: 21,
@@ -785,51 +820,64 @@ export default function ProductComponent() {
                         fontSize: 15,
                         fontFamily: "nunito-light",
                         textAlign: "right",
-                        paddingVertical: 2,
+                        paddingVertical: 5,
                       }}
                     >
-                      {item.pro_refillSize} {item.pro_refillUnit}
+                      {item.pro_refillQty} {item.pro_refillUnitVolume}
                     </Text>
                   </View>
-
-                  <Text style={{ fontSize: 15, fontFamily: "nunito-light" }}>
-                    Product's Promo {item.pro_discount || 0}%
-                  </Text>
+                  {item.pro_discount !== "0" &&
+                  item.pro_discount.trim() !== "" ? (
+                    <Text style={{ fontSize: 15, fontFamily: "nunito-light" }}>
+                      Product's discount {item.pro_discount || 0}%
+                    </Text>
+                  ) : (
+                    <Text style={{ fontSize: 15, fontFamily: "nunito-light" }}>
+                      No available discount
+                    </Text>
+                  )}
 
                   <Text style={{ fontSize: 15, fontFamily: "nunito-light" }}>
                     ₱{item.pro_refillPrice}
                   </Text>
 
-                  {!tankSupply ||
-                  (tankSupply.length > 0 &&
-                    tankSupply[0].tankBalance === "0 gallons") ? (
-                    <TouchableOpacity disabled>
-                      <View
-                        style={[styles.viewAddtocart, { alignItems: "center" }]}
+                  {/* <Text style={{ fontSize: 15, fontFamily: "nunito-light" }}>
+                    Stocks: {item.pro_stockQty} {item.pro_stockUnit}
+                  </Text> */}
+                  {/* {item.pro_stockBalance&&item.pro_stockBalance !== "0" &&
+                    item.pro_stockUnit.trim() !== "" && (
+                      <Text
+                        style={{ fontSize: 15, fontFamily: "nunito-light" }}
                       >
-                        <MaterialCommunityIcons
-                          name="cart-outline"
-                          size={20}
-                          color="gray"
-                          style={{ marginRight: 5 }}
-                        />
-                        <Text
-                          style={{
-                            fontFamily: "nunito-bold",
-                            fontWeight: "bold",
-                            textTransform: "none",
-                            textAlign: "center",
-                            fontSize: 18,
-                            color: "gray",
-                            marginLeft: 0,
-                            //flex: 1,
-                          }}
-                        >
-                          Add to Cart
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
+                      
+                        Stocks: {item.pro_stockBalance} {item.pro_stockUnit}
+                      </Text>
+                    )} */}
+                     {item.pro_stockBalance&&item.pro_stockBalance !== "0" &&
+                    (
+                      <Text
+                        style={{ fontSize: 15, fontFamily: "nunito-light" }}
+                      >
+                        Stocks: {item.pro_stockBalance} {item.pro_stockUnit}
+                      </Text>
+                    )}
+
+                  {/* {item.pro_stockBalance !== "0" ? (
+                    <Text style={{ fontSize: 15, fontFamily: "nunito-light" }}>
+                      Stocks: {item.pro_stockBalance} {item.pro_stockUnit}
+                    </Text>
                   ) : (
+                    <Text style={{ fontSize: 15, fontFamily: "nunito-light" }}>
+                      Out of stock
+                    </Text>
+                  )} */}
+                  <View
+                    style={{
+                      flex: 1,
+                      flexDirection: "column",
+                      justifyContent: "flex-end",
+                    }}
+                  >
                     <TouchableOpacity
                       onPress={() => {
                         if (
@@ -845,9 +893,149 @@ export default function ProductComponent() {
                           showmodalRefillOption(item);
                         }
                       }}
+                      //disabled={selectedItem.some((selectedItem) => selectedItem.id === item.id)}
+                      disabled={item.pro_stockBalance === "0"}
                     >
                       <View
-                        style={[styles.viewAddtocart, { alignItems: "center" }]}
+                        style={[
+                          styles.viewAdttoCartOtherProduct,
+                          { alignItems: "center" },
+                        ]}
+                      >
+                        <MaterialCommunityIcons
+                          name="cart-outline"
+                          size={20}
+                          color="black"
+                          style={{ marginRight: 5 }}
+                        />
+                        <Text
+                          style={{
+                            fontFamily: "nunito-bold",
+                            fontWeight: "bold",
+                            textTransform: "none",
+                            textAlign: "center",
+                            fontSize: 18,
+                            color: "black",
+                            marginLeft: 0,
+
+                            //flex: 1,
+                          }}
+                        >
+                          Add to Cart
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            />
+          </View>
+
+          {/* label here to notify customer if the other product's stock is 0 */}
+
+          {/*Third Party Products codes*/}
+
+          <Text style={styles.otherProductLabelStyle}>
+            Third Party Products
+          </Text>
+          <View style={{ height: responsiveHeight(55) }}>
+            <FlatList
+              horizontal={true}
+              contentContainerStyle={{
+                flexDirection: "row",
+                alignItems: "center",
+              }}
+              showsHorizontalScrollIndicator={false}
+              data={thirdPartyProducts}
+              keyExtractor={(item, index) => item.thirdparty_productId}
+              renderItem={({ item }) => (
+                <View
+                  style={styles.viewWaterItem_otherProduct}
+                  key={item.thirdparty_productId}
+                >
+                  <Image
+                    style={styles.waterImageStyle}
+                    source={{ uri: thirdPartyProdsImage }}
+                  />
+                  <View
+                    style={{ flexDirection: "row" }}
+                    key={item.thirdparty_productId}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 21,
+                        fontFamily: "nunito-reg",
+                        flex: 1,
+                      }}
+                    >
+                      {item.thirdparty_productName}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 15,
+                        fontFamily: "nunito-light",
+                        textAlign: "right",
+                        paddingVertical: 5,
+                      }}
+                    >
+                      {item.thirdparty_productQty}{" "}
+                      {item.thirdparty_productUnitVolume}
+                    </Text>
+                  </View>
+                  {item.thirdparty_productDiscount.trim() !== "" ? (
+                    <Text style={{ fontSize: 15, fontFamily: "nunito-light" }}>
+                      Product's discount {item.thirdparty_productDiscount}%
+                    </Text>
+                  ) : (
+                    <Text style={{ fontSize: 15, fontFamily: "nunito-light" }}>
+                      No available discount
+                    </Text>
+                  )}
+
+                  <Text style={{ fontSize: 15, fontFamily: "nunito-light" }}>
+                    ₱{item.thirdparty_productPrice}
+                  </Text>
+                  {item.thirdparty_qtyStock !== "0" ? (
+                    <Text style={{ fontSize: 15, fontFamily: "nunito-light" }}>
+                      Stocks: {item.thirdparty_qtyStock}{" "}
+                      {item.thirdparty_unitStock}
+                    </Text>
+                  ) : (
+                    <Text style={{ fontSize: 15, fontFamily: "nunito-light" }}>
+                      Out of stock
+                    </Text>
+                  )}
+
+                  <View
+                    style={{
+                      flex: 1,
+                      flexDirection: "column",
+                      justifyContent: "flex-end",
+                    }}
+                  >
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (
+                          selectedItem.some(
+                            (selectedItem) => selectedItem.id === item.id
+                          )
+                        ) {
+                          Alert.alert(
+                            "Warning",
+                            "You already selected this item"
+                          );
+                        } else {
+                          showmodalRefillOption(item);
+                        }
+                      }}
+                      //disabled={selectedItem.some((selectedItem) => selectedItem.id === item.id)}
+                      disabled={item.thirdparty_qtyStock == "0"}
+                    >
+                      <View
+                        style={[
+                          styles.viewAdttoCartOtherProduct,
+                          { alignItems: "center" },
+                        ]}
                       >
                         <MaterialCommunityIcons
                           name="cart-outline"
@@ -871,173 +1059,35 @@ export default function ProductComponent() {
                         </Text>
                       </View>
                     </TouchableOpacity>
-                  )}
+                  </View>
                 </View>
               )}
             />
           </View>
 
-          {/*other Product Codes */}
-
-          <Text style={styles.otherProductLabelStyle}>Other Products</Text>
-          <FlatList
-            horizontal={true}
-            contentContainerStyle={{
-              flexDirection: "row",
-              alignItems: "center",
-            }}
-            showsHorizontalScrollIndicator={false}
-            data={otherProducts}
-            keyExtractor={(item, index) => item.other_productId}
-            renderItem={({ item }) => (
-              <View style={styles.viewWaterItem_otherProduct} key={item.id}>
-                <Image
-                  style={styles.waterImageStyle}
-                  source={{ uri: otherproductImageURL }}
-                />
-                <View style={{ flexDirection: "row" }} key={item.id}>
-                  <Text
-                    style={{ fontSize: 21, fontFamily: "nunito-reg", flex: 1 }}
-                  >
-                    {item.other_productName}
-                  </Text>
-                  <Text
-                    style={{
-                      fontSize: 15,
-                      fontFamily: "nunito-light",
-                      textAlign: "right",
-                      paddingVertical: 2,
-                    }}
-                  >
-                    {item.other_productSize} {item.other_productUnit}
-                  </Text>
-                </View>
-
-                <Text style={{ fontSize: 15, fontFamily: "nunito-light" }}>
-                  Product's promo {item.other_productDiscount}%
-                </Text>
-                <Text style={{ fontSize: 15, fontFamily: "nunito-light" }}>
-                  ₱{item.other_productPrice}
-                </Text>
-
-                <View
-                  style={{
-                    flex: 1,
-                    flexDirection: "column",
-                    justifyContent: "flex-end",
-                  }}
-                >
-                  <TouchableOpacity
-                    onPress={() => {
-                      if (
-                        selectedItem.some(
-                          (selectedItem) => selectedItem.id === item.id
-                        )
-                      ) {
-                        Alert.alert(
-                          "Warning",
-                          "You already selected this item"
-                        );
-                      } else {
-                        showmodalRefillOption(item);
-                      }
-                    }}
-                    //disabled={selectedItem.some((selectedItem) => selectedItem.id === item.id)}
-                  >
-                    {/* <TouchableOpacity onPress={()=>{
-                    navigation.navigate("toProductDetailsAndOrderScreen",{item,extractedDatas,rewardsData})
-                  }}> */}
-                    <View
-                      style={[
-                        styles.viewAdttoCartOtherProduct,
-                        { alignItems: "center" },
-                      ]}
-                    >
-                      <MaterialCommunityIcons
-                        name="cart-outline"
-                        size={20}
-                        color="black"
-                        style={{ marginRight: 5 }}
-                      />
-                      <Text
-                        style={{
-                          fontFamily: "nunito-bold",
-                          fontWeight: "bold",
-                          textTransform: "none",
-                          textAlign: "center",
-                          fontSize: 18,
-                          color: "black",
-                          marginLeft: 0,
-                          //flex: 1,
-                        }}
-                      >
-                        Add to Cart
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-          />
-
           {/* Store Review */}
-          {storeRatings && storeRatings.length > 0 ? (
+          {/* {storeRatings && storeRatings.length > 0 ? (
             <Text style={styles.otherProductLabelStyle}>
               Review and Ratings
             </Text>
-          ) : null}
-
-          <FlatList
-            horizontal={true}
-            contentContainerStyle={{
-              flexDirection: "row",
-              alignItems: "center",
+          ) : null} */}
+          <TouchableOpacity
+            onPress={() => {
+              navigation.navigate("RatingScreen", {
+                storeName,
+                selectedStationID,
+              });
+              console.log("Test-");
             }}
-            showsHorizontalScrollIndicator={false}
-            data={storeRatings || null}
-            keyExtractor={(item, index) => item.other_productId}
-            renderItem={({ item }) => (
-              <View style={styles.viewReviewAndRatings}>
-                <View style={styles.itemLeft}>
-                  <View style={styles.square}>
-                    <Image
-                      source={require("../assets/userIconReview.png")}
-                      style={styles.viewImageReview}
-                    />
-                  </View>
-                  <View style={{ marginTop: 5 }}>
-                    <Text style={styles.reviewName}>
-                      {item.firstName} {item.lastName}
-                    </Text>
-                    <Text>{item.feedback}</Text>
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        marginTop: 2,
-                        marginLeft: -2,
-                      }}
-                    >
-                      {Array(item.ratings)
-                        .fill()
-                        .map((_, i) => (
-                          <FontAwesome
-                            key={i}
-                            name="star"
-                            size={14}
-                            color="black"
-                            style={{ marginRight: 3 }}
-                          />
-                        ))}
-                    </View>
-                  </View>
-                </View>
-              </View>
-            )}
-          />
+          >
+            <Text style={styles.otherProductLabelStyle}>
+              View review and ratings here!
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* touchable for the submit button */}
-        <TouchableOpacity onPress={myCartFunction} disabled={cartCount === 0}>
+        <Pressable onPress={myCartFunction} disabled={cartCount === 0}>
           <View
             style={[
               styles.viewButtonStyle,
@@ -1085,7 +1135,7 @@ export default function ProductComponent() {
               </Text>
             </View>
           </View>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </ScrollView>
   );
@@ -1114,7 +1164,7 @@ const styles = StyleSheet.create({
     // backgroundColor:'blue'
   },
   swapOptionModal: {
-    width: 335,
+    width: responsiveWidth(90),
     height: 340,
     backgroundColor: "white",
     borderBottomColor: "gray",
@@ -1131,7 +1181,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   inputWrapper: {
-    //  backgroundColor: "green",
+    ///  backgroundColor: "green",
     paddingVertical: 5,
     marginTop: 5,
     height: 50,
@@ -1152,14 +1202,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#87cefa",
     width: "60%",
     justifyContent: "center",
-    height: 40,
+    height: responsiveHeight(5),
     opacity: 0.7,
     alignContent: "center",
     alignItems: "center",
-    marginTop: 15,
+    //marginTop: 15,
     marginLeft: 45,
     flexDirection: "row",
-    height: 30,
+    // height: 30,
   },
   viewAddtocart: {
     borderRadius: 7,
@@ -1187,7 +1237,7 @@ const styles = StyleSheet.create({
     alignContent: "center",
     //position: "absolute",
     alignItems: "center",
-    marginTop: 15,
+    marginTop: 30,
     bottom: 20,
     marginLeft: 75,
     flexDirection: "row",
@@ -1227,8 +1277,8 @@ const styles = StyleSheet.create({
     right: 20,
   },
   wrapperWaterProduct: {
-    // backgroundColor: "yellow",
-    height: 350,
+    //  backgroundColor: "yellow",
+    height: responsiveHeight(60),
   },
   waterProdStyle: {
     fontFamily: "nunito-semibold",
@@ -1240,7 +1290,7 @@ const styles = StyleSheet.create({
     padding: 3,
     // marginBottom:40,
     width: 220,
-    height: 290,
+    height: 320,
     marginLeft: 5,
     borderRadius: 10,
     marginRight: 5,
@@ -1276,7 +1326,7 @@ const styles = StyleSheet.create({
     fontFamily: "nunito-semibold",
     fontSize: 20,
     marginLeft: 5,
-    marginTop: 15,
+    // marginTop: 15,
   },
   otherProductView: {
     backgroundColor: "red",
@@ -1286,10 +1336,10 @@ const styles = StyleSheet.create({
   viewWaterItem_otherProduct: {
     backgroundColor: "white",
     padding: 3,
-    marginTop: 15,
-    marginBottom: 10,
+    marginTop: "20%",
+    marginBottom: responsiveHeight(10),
     width: 220,
-    height: 330,
+    height: responsiveHeight(50),
     marginLeft: 3,
     borderRadius: 10,
     marginRight: 5,

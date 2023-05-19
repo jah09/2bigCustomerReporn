@@ -9,9 +9,15 @@ import {
   FlatList,
   ToastAndroid,
   Image,
+  Dimensions,
 } from "react-native";
+import {
+  responsiveHeight,
+  responsiveWidth,
+} from "react-native-responsive-dimensions";
+import { AntDesign } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useRoute } from "@react-navigation/native";
@@ -30,6 +36,19 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ScrollView } from "react-native-web";
 export default function OrderModule({}) {
+  // const deviceHeight = Dimensions.get("window").height;
+  // const deviceWidth = Dimensions.get("window").width;
+  const [deviceHeight, setdeviceHeight] = useState();
+  const [deviceWidth, setdeviceWidth] = useState();
+  useEffect(() => {
+    const deviceHeight = Dimensions.get("window").height;
+    const deviceWidth = Dimensions.get("window").width;
+    setdeviceWidth(deviceWidth);
+    setdeviceHeight(deviceHeight);
+    console.log("device height line 40---->", deviceHeight);
+    console.log("devide width line 41---->", deviceWidth);
+  }, []);
+
   const styleTypes = ["default", "dark-content", "light-content"];
   const [visibleStatusBar, setvisibleStatusbar] = useState(false);
   const [styleStatusBar, setstyleStatusBar] = useState(styleTypes[0]);
@@ -79,31 +98,29 @@ export default function OrderModule({}) {
   };
 
   //get the employee data
-  useEffect(() => {
+  useLayoutEffect(() => {
     const empRef = ref(db, "EMPLOYEES/");
-    // const empData= query(
-    //   orderRef,
-    //   orderByChild("emp_id"),
-    //   equalTo(customerId)
-    // );
+
     onValue(empRef, (snapshot) => {
       // const storePic=snapshot.val();
       const data = snapshot.val();
       //  console.log("to pass data test",data);
+      if (data && Object.keys(data).length > 0) {
+        const newEmpInfo = Object.keys(data).map((key) => ({
+          id: key,
 
-      const newEmpInfo = Object.keys(data).map((key) => ({
-        id: key,
+          ...data[key],
+        }));
 
-        ...data[key],
-      }));
+        setDriverData(newEmpInfo);
+      }
 
       //console.log('ORDER SCREEN- DATA FROM EMPLOYEE COLLECTION RECEIVED',newEmpInfo); //test if successfully fetch the datas in STOREINFORMATION
-      setDriverData(newEmpInfo);
     });
   }, []);
 
   //get the customer ID from Async in login screen and extract it and Save to customerID
-  useEffect(() => {
+  useLayoutEffect(() => {
     AsyncStorage.getItem("customerData") //e get ang Asycn sa login screen
       .then((data) => {
         if (data !== null) {
@@ -121,7 +138,7 @@ export default function OrderModule({}) {
   }, []);
 
   //get the ORDER COLLECTION and filtered it, as requirement needed
-  useEffect(() => {
+  useLayoutEffect(() => {
     const orderRef = ref(db, "ORDERS/");
     if (customerId) {
       //console.log("orderDetailsScreen", customerId);
@@ -136,58 +153,62 @@ export default function OrderModule({}) {
         (snapshot) => {
           if (snapshot.exists()) {
             const data = snapshot.val();
-            const OrderInformation = Object.keys(data).map((key) => ({
-              id: key,
+            if (data && Object.keys(data).length > 0) {
+              const OrderInformation = Object.keys(data).map((key) => ({
+                id: key,
 
-              ...data[key],
-            }));
-            // console.log("line 95", data);
-            const filteredOrderData = OrderInformation.filter(
-              (order) =>
-                order.order_OrderStatus === "Accepted" ||
-                order.order_OrderStatus === "Out for Delivery" ||
-                order.order_OrderStatus === "Pending" ||
-                order.order_OrderStatus === "Delivered"
-            );
-
-            filteredOrderData.forEach((order) => {
-              const products = order.order_Products.map((product) => ({
-                productId: product.order_ProductId,
-                productName: product.order_ProductName,
-                productPrice: product.order_ProductPrice,
-                productsize: product.order_size,
-                productUnit: product.order_unit,
+                ...data[key],
               }));
+              // console.log("line 95", data);
+              const filteredOrderData = OrderInformation.filter(
+                (order) =>
+                  order.order_OrderStatus === "Accepted" ||
+                  order.order_OrderStatus === "Out for Delivery" ||
+                  order.order_OrderStatus === "Pending" ||
+                  order.order_OrderStatus === "Delivered" ||
+                  order.order_OrderStatus === "Payment Received"
+              );
 
-              // console.log("161",{
-              //   ...order,
-              //   order_Products: products,
-              // });
-            });
-            //console.log("Extracted data", JSON.stringify(filteredOrderData));
+              filteredOrderData.forEach((order) => {
+                const products = order.order_Products.map((product) => ({
+                  productId: product.order_ProductId,
+                  productName: product.order_ProductName,
+                  productPrice: product.order_ProductPrice,
+                  productsize: product.order_size,
+                  productUnit: product.order_unit,
+                }));
 
-            const empLatlong = filteredOrderData.map((order) => {
-              const emp =
-                (driverData || []).find(
-                  (emp) => emp.emp_id === order.driverId
-                ) || null;
-              if (emp) {
-                return {
-                  ...order,
-                  driverLatt: emp.lattitude,
-                  driverLong: emp.longitude,
-                };
-              } else {
-                return order;
-              }
-            });
-            // console.log("line 164",empLatlong);
-            setDriverLocation(empLatlong);
-            // console.log("line 146", JSON.stringify(filteredOrderData));
-            setOrderInfo(filteredOrderData);
+                // console.log("161",{
+                //   ...order,
+                //   order_Products: products,
+                // });
+              });
+              //console.log("Extracted data", JSON.stringify(filteredOrderData));
+
+              const empLatlong = filteredOrderData.map((order) => {
+                const emp =
+                  (driverData || []).find(
+                    (emp) => emp.emp_id === order.driverId
+                  ) || null;
+                if (emp) {
+                  return {
+                    ...order,
+                    driverLatt: emp.lattitude,
+                    driverLong: emp.longitude,
+                  };
+                } else {
+                  return order;
+                }
+              });
+              // console.log("line 164",empLatlong);
+              setDriverLocation(empLatlong);
+              // console.log("line 146", JSON.stringify(filteredOrderData));
+              setOrderInfo(filteredOrderData);
+            }
           } else {
             // console.log("No orders found for customer---", customerId);
-            alert("No order found, please make an order first.");
+            // alert("No order found, please make an order first.");
+            console.log("No orders found for customer---", customerId);
           }
         },
         (error) => {
@@ -240,6 +261,27 @@ export default function OrderModule({}) {
     //  console.log("this line",customerData.cusId)
   };
 
+  //get the current date
+  useEffect(() => {
+    const functionsetCurrentDate = () => {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, "0");
+      const day = String(today.getDate()).padStart(2, "0");
+      const hours = String(today.getHours()).padStart(2, "0");
+      const minutes = String(today.getMinutes()).padStart(2, "0");
+      const seconds = String(today.getSeconds()).padStart(2, "0");
+      const formattedDate = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+      setCurrentDate(formattedDate);
+
+      return formattedDate;
+    };
+
+    functionsetCurrentDate();
+  }, []);
+
+  const [currentDate, setCurrentDate] = useState("");
+  //create review for the station
   const createReview = (customerId) => {
     const RandomId = Math.floor(Math.random() * 50000) + 10000;
     //const newOrderRef = push(ref(db, "Orders"));
@@ -254,6 +296,8 @@ export default function OrderModule({}) {
       cusId: customerId,
       feedback: textinput_Feedback,
       ratings: parseFloat(ratings),
+      customerFirstName: customerData.firstName,
+      customerLastName: customerData.lastName,
     })
       .then(async () => {
         // console.log('Test if Save to db-----'+reservationDate );
@@ -268,6 +312,54 @@ export default function OrderModule({}) {
         );
         setRatings(null);
         setTextInput_Feedback(null);
+      })
+      .catch((error) => {
+        console.log("Error Saving to Database", error);
+        alert("Error", JSON.stringify(error), "OK");
+      });
+
+    //save to customer'sLog
+    const customerLogRandomId = Math.floor(Math.random() * 50000) + 10000;
+    const action = "createReview";
+    set(ref(db, `CUSTOMERSLOG/${customerLogRandomId}`), {
+      // orderID: newOrderKey,
+      cusId: customerId,
+      reviewDate: currentDate,
+      logsPerformed: action,
+      reviewId: newRandomKey,
+      // pointsUpdate: pointsUpdate,
+      // pointsAddedValue: pointsTobeAddedd,
+    })
+      .then(async () => {
+        // console.log('Test if Save to db-----'+reservationDate );
+        console.log(
+          "Order module-->New UserLog with the User ID of--->",
+          customerLogRandomId
+        );
+      })
+      .catch((error) => {
+        console.log("Error Saving to Database", error);
+        alert("Error", JSON.stringify(error), "OK");
+      });
+
+    //save to notification
+    const notificationRandomId = Math.floor(Math.random() * 50000) + 10000;
+    set(ref(db, `NOTIFICATION/${notificationRandomId}`), {
+      // orderID: newOrderKey,
+      cusId: customerId,
+      dateReview: currentDate,
+      reviewId: newRandomKey,
+      title: "Customer Review",
+      body: `Customer ${customerData.firstName} ${customerData.lastName} gave you a ${ratings} ratings and review`,
+      // pointsUpdate: pointsUpdate,
+      // pointsAddedValue: pointsTobeAddedd,
+    })
+      .then(async () => {
+        // console.log('Test if Save to db-----'+reservationDate );
+        console.log(
+          "Order module-->New user send a notification--->",
+          notificationRandomId
+        );
       })
       .catch((error) => {
         console.log("Error Saving to Database", error);
@@ -299,20 +391,36 @@ export default function OrderModule({}) {
                 <Text
                   style={{
                     marginTop: 8,
-                    marginLeft: 0,
+                    marginLeft: 20,
                     fontFamily: "nunito-bold",
                     fontSize: 18,
+                    justifyContent: "center",
+                    alignItems: "center",
                   }}
                 >
                   {selectedItemID.order_StoreName}
                 </Text>
 
+                <View style={{ flex: 1, marginTop: 2 }} />
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowModal(false);
+                  }}
+                >
+                  <AntDesign
+                    name="close"
+                    size={20}
+                    color="black"
+                    style={{ marginTop: 5 }}
+                  />
+                </TouchableOpacity>
+
                 <View
                   style={{
-                    backgroundColor: "transparent",
+                    backgroundColor: "red",
                     textAlign: "right",
-                    right: -80,
-                    marginTop: -10,
+                    //  right: -80,
+                    // marginTop: -10,
                   }}
                 >
                   {/* <TouchableOpacity
@@ -717,8 +825,6 @@ export default function OrderModule({}) {
                   </Text>
                 </View>
 
-              
-
                 {/*status  template and its value */}
                 <View
                   style={{
@@ -833,7 +939,13 @@ export default function OrderModule({}) {
                 </View>
 
                 {/* Products order by the customer */}
-                <View style={{ marginTop: 5, height: 100 ,backgroundColor:'transparent'}}>
+                <View
+                  style={{
+                    marginTop: 2,
+                    height: responsiveHeight(15),
+                   // backgroundColor: "red",
+                  }}
+                >
                   <Text
                     style={{
                       fontFamily: "nunito-semibold",
@@ -895,7 +1007,7 @@ export default function OrderModule({}) {
                                 "..."}
                           </Text>
                         </View>
-                       {/* size and unit */}
+                        {/* size and unit */}
                         <View
                           style={{
                             //   backgroundColor: "brown",
@@ -956,8 +1068,8 @@ export default function OrderModule({}) {
                           </Text>
                         </View>
 
-                          {/*quantity for each item */}
-                          <View
+                        {/*quantity for each item */}
+                        <View
                           style={{
                             // backgroundColor: "brown",
                             flexDirection: "row",
@@ -983,20 +1095,140 @@ export default function OrderModule({}) {
                             }}
                           >
                             {product.qtyPerItem}
-
                           </Text>
                         </View>
                       </View>
                     )}
                   />
                 </View>
+
+                {/* Total Initial amount*/}
+                <View
+                  style={{
+                    //top:5,
+                    flexDirection: "row",
+                    alignItems: "flex-end",
+                    bottom: 2,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: "nunito-semibold",
+                      fontSize: 15,
+                      marginTop: 6,
+                    }}
+                  >
+                    Total Initial Amount
+                  </Text>
+                  <Text
+                    style={{
+                      fontFamily: "nunito-semibold",
+                      fontSize: 15,
+                      textAlign: "right",
+                      flex: 1,
+                    }}
+                  >
+                    ₱ {item.order_InitialAmount || 0}
+                  </Text>
+                </View>
+
+                {/* Pick Up fee*/}
+                <View
+                  style={{
+                    //top:5,
+                    flexDirection: "row",
+                    alignItems: "flex-end",
+                    bottom: 4,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: "nunito-semibold",
+                      fontSize: 15,
+                      marginTop: 6,
+                    }}
+                  >
+                    Pick up fee
+                  </Text>
+                  <Text
+                    style={{
+                      fontFamily: "nunito-semibold",
+                      fontSize: 15,
+                      textAlign: "right",
+                      flex: 1,
+                    }}
+                  >
+                    ₱ {item.orderPickUpFee || 0}
+                  </Text>
+                </View>
+
+                {/*Delivery fee*/}
+                <View
+                  style={{
+                    //top:5,
+                    flexDirection: "row",
+                    alignItems: "flex-end",
+                    bottom: 4,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: "nunito-semibold",
+                      fontSize: 15,
+                      marginTop: 6,
+                    }}
+                  >
+                    Delivery fee
+                  </Text>
+                  <Text
+                    style={{
+                      fontFamily: "nunito-semibold",
+                      fontSize: 15,
+                      textAlign: "right",
+                      flex: 1,
+                    }}
+                  >
+                    ₱ {item.orderDeliveryfee || 0}
+                  </Text>
+                </View>
+
+                {/* Subtotal*/}
+                <View
+                  style={{
+                    //top:5,
+                    flexDirection: "row",
+                    alignItems: "flex-end",
+                    bottom: 4,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: "nunito-semibold",
+                      fontSize: 15,
+                      marginTop: 6,
+                    }}
+                  >
+                    Sub total
+                  </Text>
+                  <Text
+                    style={{
+                      fontFamily: "nunito-semibold",
+                      fontSize: 15,
+                      textAlign: "right",
+                      flex: 1,
+                    }}
+                  >
+                    ₱ {item.order_SubTotal || 0}
+                  </Text>
+                </View>
                 <View
                   style={{
                     borderBottomWidth: 0.5,
                     borderColor: "gray",
-                    marginTop: 10,
+                    marginTop: 5,
                   }}
-                ></View> 
+                ></View>
+                {/* Total aamount */}
                 <View
                   style={{
                     //top:5,
@@ -1011,7 +1243,7 @@ export default function OrderModule({}) {
                       marginTop: 6,
                     }}
                   >
-                    Total
+                    Total Amount
                   </Text>
                   <Text
                     style={{
@@ -1021,23 +1253,26 @@ export default function OrderModule({}) {
                       flex: 1,
                     }}
                   >
-                    {item.order_TotalAmount}
+                    ₱ {item.order_TotalAmount}
                   </Text>
-                </View> 
+                </View>
+
+                {/* view for the driver's location button */}
+
                 <View
                   style={{
-                //     backgroundColor: "yellow",
+                    // backgroundColor: "yellow",
                     height: 50,
                     flexDirection: "row",
                     justifyContent: "flex-end",
-                    top:3
+                    top: 3,
                   }}
                 >
                   <View
                     style={{
                       flex: 1,
                       justifyContent: "center",
-                     // backgroundColor: "red",
+                       //backgroundColor: "red",
                     }}
                   >
                     <TouchableOpacity
@@ -1048,13 +1283,14 @@ export default function OrderModule({}) {
                     >
                       <View
                         style={{
-                        
                           backgroundColor: item.driverId ? "#73a9c2" : "gray",
                           padding: 6,
                           width: 110,
+                          //  width: 130,
                           marginLeft: 0,
                           borderRadius: 5,
-                          marginTop: 5,
+                         // marginTop: 5,
+
                         }}
                       >
                         <Text
@@ -1066,53 +1302,9 @@ export default function OrderModule({}) {
                         >
                           Driver's Location
                         </Text>
-
-                      
                       </View>
                     </TouchableOpacity>
                   </View>
-                  <TouchableOpacity
-                    onPress={() => {
-                      Alert.alert(
-                        "Cancel Order",
-                        "Do you want to cancel your order?",
-                        [
-                          {
-                            text: "Yes",
-                            onPress: () => {
-                              console.log(" yes cancel order ");
-                            },
-                          },
-                          {
-                            text: "No",
-                            onPress: () => {
-                              console.log(" No cancel order ");
-                            },
-                          },
-                        ]
-                      );
-                    }}
-                  >
-                    <View
-                      style={{
-                        // backgroundColor: "green",
-                        marginTop: 15,
-                        height: 25,
-                        borderRadius: 5,
-                        padding: 4,
-                        flexDirection: "row",
-                        width: 30,
-                        height: 30,
-                        justifyContent: "center",
-                        marginLeft: 0,
-                        // marginRight:-75,
-                        // elevation: 4,
-                        alignItems: "center",
-                      }}
-                    >
-                      <MaterialIcons name="cancel" size={23} color="black" />
-                    </View>
-                  </TouchableOpacity>
 
                   <TouchableOpacity
                     onPress={() => onPressHandlerShowModal({ item: item })}
@@ -1142,47 +1334,6 @@ export default function OrderModule({}) {
                       <MaterialIcons name="feedback" size={24} color="black" />
                     </View>
                   </TouchableOpacity>
-
-                  {/* <TouchableOpacity
-                    onPress={() => {
-                      Alert.alert("Confirmation", "Order received?", [
-                        {
-                          text: "Not yet",
-                          onPress: () => {
-                            updateOrderStatus(item.orderID, "Not yet receive");
-                          },
-                        },
-                        {
-                          text: "Yes",
-                          onPress: () => {
-                            updateOrderStatus(item.orderID, "Received Order");
-                          },
-                        },
-                      ]);
-                    }}
-                  >
-                    <View
-                      style={{
-                        //  backgroundColor: "red",
-                        marginTop: 15,
-                        height: 25,
-                        //borderRadius: 5,
-                        padding: 4,
-                        flexDirection: "row",
-                        width: 30,
-                        justifyContent: "center",
-                        marginRight: 1,
-                        height: 30,
-                      }}
-                    >
-                      <MaterialIcons
-                        name="done"
-                        size={24}
-                        color="black"
-                        style={{ marginBottom: -10 }}
-                      />
-                    </View>
-                  </TouchableOpacity> */}
                 </View>
               </View>
             </View>
@@ -1226,8 +1377,8 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     padding: 3,
     marginBottom: 0,
-    width: 120,
-    height: 70,
+    width: responsiveWidth(40),
+    height: responsiveHeight(12),
     //marginLeft: 5,
     borderRadius: 5,
     marginRight: 5,
@@ -1238,7 +1389,7 @@ const styles = StyleSheet.create({
       width: 5,
     },
     elevation: 4,
-   // top:10
+    // top:10
   },
   container: {
     flex: 1,
@@ -1260,11 +1411,14 @@ const styles = StyleSheet.create({
     //backgroundColor: "yellowgreen",
     padding: 10,
     // flex: 1,
-    height: 460,
-    marginTop: 35,
+    //height: 550,
+    // height: 600,
+    height: responsiveHeight(89),
+    marginTop: 10,
   },
   viewwatername: {
-    // backgroundColor: "green",
+    // backgroundColor: "yellow",
+
     width: 150,
     marginHorizontal: 120,
   },
@@ -1277,7 +1431,7 @@ const styles = StyleSheet.create({
     marginLeft: 0,
   },
   wrapperWaterProduct: {
-   // backgroundColor: "blue",
+    // backgroundColor: "blue",
 
     // marginBottom: 5,
     flex: 1,
@@ -1286,10 +1440,15 @@ const styles = StyleSheet.create({
   viewWaterItem: {
     backgroundColor: "white",
     padding: 3,
-    // marginTop: 0,
+
+     marginTop: 30,
     bottom: 30,
-    width: "100%",
-    height: 480,
+    //  width: "100%",
+    width: responsiveWidth(95),
+    //width: Dimensions.get("window").width - 20,
+    //height: 560,
+    //height: Dimensions.get("window").height/2 + 250,
+    height: responsiveHeight(88),
     marginLeft: 0,
     borderRadius: 10,
     marginRight: 5,
@@ -1319,8 +1478,10 @@ const styles = StyleSheet.create({
   modalTitle: {
     // backgroundColor:'red',
     justifyContent: "center",
+    //justifyContent: "flex-start",
     padding: 0,
     flexDirection: "row",
+    // left:10
   },
   inputwrapper: {
     // backgroundColor: "green",

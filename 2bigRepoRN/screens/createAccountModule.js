@@ -26,6 +26,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import CustomBtn from "../shared/customButton";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Fontisto } from "@expo/vector-icons";
+import Geocoder from "react-native-geocoding";
 import * as Location from "expo-location";
 import { geocodeAsync, reverseGeocodeAsync } from "expo-location";
 import { getDatabase, ref, set, push, child, get } from "firebase/database";
@@ -36,10 +37,15 @@ import { AntDesign } from "@expo/vector-icons";
 //import ImagePicker from 'react-native-image-picker';
 import * as ImagePicker from "expo-image-picker";
 import * as Permissions from "expo-permissions";
+import { GOOGLE_API_KEY_GEOLOCATION } from "../APIKEY";
 import { firebase } from "../firebaseStorage";
 import { db } from "../firebaseConfig";
+import { add } from "lodash";
 
 export default function CreateAccountPage({ navigation }) {
+  useEffect(() => {
+    Geocoder.init(GOOGLE_API_KEY_GEOLOCATION);
+  }, []);
   const [checkValidEmail, setCheckValidEmail] = useState(false);
 
   const handleCheckEmail = (text) => {
@@ -108,6 +114,28 @@ export default function CreateAccountPage({ navigation }) {
   {
     /* for detecting geolocation and reverse code start here*/
   }
+
+  function formatAddress(json) {
+    let address = "";
+    for (let i = 0; i < json.length; i++) {
+      let component = json[i];
+      if (component.types.includes("street_number")) {
+        address += component.long_name + " ";
+      } else if (component.types.includes("route")) {
+        address += component.long_name + ", ";
+      } else if (component.types.includes("neighborhood")) {
+        address += component.long_name + ", ";
+      } else if (component.types.includes("locality")) {
+        address += component.long_name + ", ";
+      } else if (component.types.includes("administrative_area_level_1")) {
+        address += component.short_name + ", ";
+      } else if (component.types.includes("country")) {
+        address += component.long_name;
+      }
+    }
+    return address;
+  }
+
   const [location, setLocation] = useState(null);
   // const [address, setAddress] = useState(null);
   const [addresstext, setAddresstext] = useState("");
@@ -129,21 +157,73 @@ export default function CreateAccountPage({ navigation }) {
         setLatittudeLoc(location.coords.latitude);
         setLongitudeLoc(location.coords.longitude);
         setLocation(location);
-        //console.log(location);
-        let address = await reverseGeocodeAsync({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        });
 
-        setAddress(address[0].name + ", " + address[0].city);
-        console.log(
-          address[0].name + ", " + address[0].subregion + "," + address[0].city
-        );
+        //console.log(location);
+        // let address = await reverseGeocodeAsync({
+        //   latitude: location.coords.latitude,
+        //   longitude: location.coords.longitude,
+        // });
+
+        // setAddress(address[0].name + ", " + address[0].city);
+        // console.log(
+        //   address[0].name + ", " + address[0].subregion + "," + address[0].city
+        // );
+        Geocoder.from(location.coords.latitude, location.coords.longitude)
+          .then((json) => {
+              let address = json.results[5].formatted_address;
+              let types = json.results[3].address_components;
+             // console.log("address",address);
+             // console.log("types",types);
+              let streetNameComponent = types.find((component) =>
+              component.types.includes("route")
+            );
+            let streetName = streetNameComponent.short_name;
+            
+            // Modify the address string to include the street name
+            address = address.replace("Cebu City", streetName + ", Cebu City");
+            
+           // console.log("Modified address:", address);
+           setAddress(address);
+            // let barangay = "";
+            // for (
+            //   let i = 0;
+            //   i < address;
+            //   i++
+            // ) {
+            //   const component = address[i];
+            //   if (component.types.includes("sublocality_level_1")) {
+            //     barangay = component.long_name;
+            //     break;
+            //   }
+            // }
+            // console.log("line 186",barangay);
+          })
+          .catch((error) => console.warn(error));
         // setShowModal(false);
       })();
     }
   }, [isPressed]);
-
+  // useEffect(() => {
+  //   if (isPressed) {
+  //     Geolocation.getCurrentPosition(
+  //       async position => {
+  //         setLatittudeLoc(position.coords.latitude);
+  //         setLongitudeLoc(position.coords.longitude);
+  //         console.log("line 154",position);
+  //         try {
+  //           const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${position.coords.latitude},${position.coords.longitude}&key=${GoogleAPIKEy}`);
+  //           const data = await response.json();
+  //           console.log("Line 158",data.results[0].formatted_address)
+  //           setAddress(data.results[0].formatted_address);
+  //         } catch (error) {
+  //           console.log(error);
+  //         }
+  //       },
+  //       error => console.log(error),
+  //       { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 }
+  //     );
+  //   }
+  // }, [isPressed]);
   {
     /* for detecting geolocation and reverse code end here*/
   }
@@ -280,14 +360,18 @@ export default function CreateAccountPage({ navigation }) {
   async function createUserAccount() {
     const auth = getAuth();
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = userCredential.user;
       const db = getDatabase();
-  
+
       // Generate new unique customer ID
       const cusId = Math.floor(Math.random() * 900000) + 100000;
       const status = "Pending";
-  
+
       // Add customer details to database
       await set(ref(db, "CUSTOMER/" + cusId), {
         cusId: cusId,
@@ -305,15 +389,19 @@ export default function CreateAccountPage({ navigation }) {
         cus_status: status,
         lattitudeLocation: lattitude_Location,
         longitudeLocation: longitude_Location,
+        dateRegistered: currentDate,
       });
-  
+
       // Add new notification to database
       const notificationRef = ref(db, "NOTIFICATION");
       const notificationSnapshot = await get(notificationRef);
-      const notificationKeys = notificationSnapshot.exists() ? Object.keys(notificationSnapshot.val()) : [];
-      const maxKey = notificationKeys.length > 0 ? Math.max(...notificationKeys) : 0;
+      const notificationKeys = notificationSnapshot.exists()
+        ? Object.keys(notificationSnapshot.val())
+        : [];
+      const maxKey =
+        notificationKeys.length > 0 ? Math.max(...notificationKeys) : 0;
       const newKey = maxKey + 1;
-  
+
       const newNotification = {
         body: "New user registered. Check the details for approval.",
         notificationDate: currentDate,
@@ -326,7 +414,7 @@ export default function CreateAccountPage({ navigation }) {
       };
       console.log("NEW NOTIF==>", newKey);
       await set(ref(db, `NOTIFICATION/${newKey}`), newNotification);
-  
+
       alert("Registration successful");
       navigation.navigate("Login");
     } catch (error) {
@@ -334,7 +422,7 @@ export default function CreateAccountPage({ navigation }) {
       alert("Error writing document: ", error);
     }
   }
-  
+
   //start here //UPLOAD IMAGE
   //codes in getting the image from local device, display it and lastly upload to firebase storage
   const [gcashProoflink_Storage, setgcashProoflink_Storage] = useState();
@@ -787,10 +875,15 @@ export default function CreateAccountPage({ navigation }) {
                     setAddress(address);
                   }}
                   placeholder="Address"
-                  style={[
-                    globalStyles.login_Email_textInput,
-                    { marginLeft: 3 },
-                  ]}
+                  style={{
+                    fontSize: address ? 13 : 18,
+                    fontFamily: "nunito-reg",
+                    width: "90%",
+                    marginLeft: 3,
+                    color: "black",
+                    justifyContent: "flex-start",
+                    textAlignVertical: "center",
+                  }}
                   placeholderTextColor="black"
                   keyboardType="default"
                   editable={false}
@@ -1376,6 +1469,7 @@ const styles = StyleSheet.create({
     marginBottom: 25,
     width: 270,
     marginTop: 5,
+    //backgroundColor:'yellow'
   },
   customBtnStyle: {
     right: 30,
