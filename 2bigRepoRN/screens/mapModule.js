@@ -12,6 +12,7 @@ import * as Location from "expo-location";
 import { useNavigation } from "@react-navigation/native";
 import { FontAwesome } from "@expo/vector-icons";
 import { GOOGLE_API_KEY } from "../APIKEY";
+import Geocoder from "react-native-geocoding";
 import MapView, {
   Marker,
   PROVIDER_GOOGLE,
@@ -25,9 +26,12 @@ import { ref, onValue, child, update } from "firebase/database";
 import { useRoute } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-
+import { GOOGLE_API_KEY_GEOLOCATION } from "../APIKEY";
 //export const mapRef=React.createRef();
 export default function MapModule({}) {
+  useEffect(() => {
+    Geocoder.init(GOOGLE_API_KEY_GEOLOCATION);
+  }, []);
   const [storeInformation, setstoreInformation] = useState([]);
   const navigation = useNavigation();
   const route = useRoute();
@@ -42,16 +46,27 @@ export default function MapModule({}) {
   const LONGITUDE_DELTA = LATTITUDE_DELTA * aspect_ratio;
 
   //hook to get the  admin information from database
-  const cebuCityBounds = {
-    // north: 10.416667,
-    // south: 10.25,
-    // east: 123.916667,
-    // west: 123.75,
-    north: 10.3597,
-    south: 10.2231,
-    east: 123.9772,
-    west: 123.8108,
-  };
+  function isStoreWithinCebuCityBounds(lat, long) {
+    const cebuCityBounds = {
+      south: 10.259524,
+      north: 10.372442,
+      west: 123.775514,
+      east: 123.977813,
+    };
+
+    if (
+      lat >= cebuCityBounds.south &&
+      lat <= cebuCityBounds.north &&
+      long >= cebuCityBounds.west &&
+      long <= cebuCityBounds.east
+    ) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  //original codes
   // useLayoutEffect(() => {
   //   const starCountRef = ref(db, "ADMIN/");
   //   onValue(starCountRef, (snapshot) => {
@@ -70,39 +85,39 @@ export default function MapModule({}) {
   //     setstoreInformation(newStoreInfo);
   //   });
   // }, []);
-  useLayoutEffect(() => {
-    const starCountRef = ref(db, "ADMIN/");
-    onValue(starCountRef, (snapshot) => {
-      const data = snapshot.val();
-      AsyncStorage.setItem("AdminData", JSON.stringify(data));
-      const newStoreInfo = Object.keys(data)
-        .map((key) => ({
-          id: key,
-          StoreImage: data[key].StoreImage,
-          ...data[key],
-        }))
-        .filter((store) => {
-          const idnum = store.idno;
-          const lat = store.RefillingStation.addLattitude;
-          const long = store.RefillingStation.addLongitude;
-          // console.log("line 81", idnum, lat, long);
-          if (
-            lat >= cebuCityBounds.south &&
-            lat <= cebuCityBounds.north &&
-            long >= cebuCityBounds.west &&
-            long <= cebuCityBounds.east
-          ) {
-            return true;
-          } else {
-            return false;
-          }
-        });
 
-      setstoreInformation(newStoreInfo);
-    });
+  //new codes that filtered those station nga wala sa cebu city
+  useLayoutEffect(() => {
+    const starCountRef = ref(db, "ADMIN/"); //ref of the database
+    console.log("Test", starCountRef);
+    if (starCountRef === null) {
+      console.log("No admin data available yet");
+    } else {
+      onValue(starCountRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data && Object.keys(data).length > 0) {
+          const newStoreInfo = Object.keys(data)
+            .map((key) => ({
+              id: key,
+              StoreImage: data[key].StoreImage,
+              ...data[key],
+            }))
+            .filter((store) =>
+              isStoreWithinCebuCityBounds(
+                store && store?.RefillingStation?.addLattitude,
+                store && store?.RefillingStation?.addLongitude
+              )
+            );
+          // console.log("line 102",newStoreInfo)
+
+          AsyncStorage.setItem("AdminData", JSON.stringify(newStoreInfo)); //pass data of ADMIN to "AdminData" so that other screen can access it globally
+          setstoreInformation(newStoreInfo);
+        }
+      });
+    }
   }, []);
 
-  const [title, setTitle] = useState("My Location");
+  const [title, setTitle] = useState();
 
   const [location, setLocation] = useState();
   const [markerPosition, setMarkerPosition] = useState(null);
@@ -215,6 +230,33 @@ export default function MapModule({}) {
         console.log("User current location", location);
 
         setLocation(location);
+        setMarkerPosition({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+
+        //reverse the latlong
+        Geocoder.from(location.coords.latitude, location.coords.longitude)
+          .then((json) => {
+            let address = json.results[5].formatted_address;
+            let types = json.results[3].address_components;
+           // console.log("address", json);
+          //  console.log("types", types);
+            let streetNameComponent = types.find((component) =>
+              component.types.includes("route")
+            );
+
+            let streetName = streetNameComponent
+              ? streetNameComponent.short_name
+              : "";
+
+
+            // Modify the address string to include the street name
+            address = address.replace("Cebu City", streetName + " Cebu City");
+            console.log("Modified address:", address);
+            setTitle(address);
+          })
+          .catch((error) => console.warn(error));
       }
 
       // let loc=await Location.watchPositionAsync(location);
@@ -272,6 +314,7 @@ export default function MapModule({}) {
   const [customerData, setCustomerData] = useState();
   const customerID = customerData?.cusId;
 
+  //get the data of the customer from asyncStorage  from login screen
   const fetchCustomerData = async () => {
     try {
       const data = await AsyncStorage.getItem("customerData");
@@ -284,14 +327,14 @@ export default function MapModule({}) {
       alert("Error fetching data: ", error);
     }
   };
+
   useEffect(() => {
     fetchCustomerData();
   }, []);
 
   //update customer COllection with latlong
-
   useEffect(() => {
-    if (!customerID || !location || !location.coords) {
+    if (!customerID || !location || !location.coords || !title) {
       return;
     }
     const customerRef = ref(db, "CUSTOMER/");
@@ -299,6 +342,7 @@ export default function MapModule({}) {
     update(cusRef, {
       lattitudeLocation: location.coords.latitude,
       longitudeLocation: location.coords.longitude,
+      address: title,
     })
       .then(() => {
         //console.log("Customer Collection--> Latlong-->Update Success");
@@ -306,10 +350,15 @@ export default function MapModule({}) {
       .catch((error) => {
         console.log("Error updating", error);
       });
-  }, [customerID, location]);
+  }, [customerID, location, title]);
 
-  // Define the latitude and longitude bounds of Cebu City
-
+  const CustomCallout = ({ title }) => {
+    return (
+      <View style={styles.calloutContainer}>
+        <Text style={styles.calloutTitle}>{title}</Text>
+      </View>
+    );
+  };
   return (
     <View style={styles.container}>
       {location && (
@@ -332,7 +381,7 @@ export default function MapModule({}) {
           showsMyLocationButton={true}
           showsBuildings={true}
           zoomEnabled={true}
-          showsTraffic={false}
+          showsTraffic={true}
           showsCompass={true}
           showsIndoors={true}
           loadingEnabled={true}
@@ -344,14 +393,21 @@ export default function MapModule({}) {
           tracksViewChanges={true}
         >
           <Marker
-            coordinate={{
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
+            calloutVisible={true}
+            callout={{
+              tooltip: true,
+              stopPropagation: true,
             }}
-            //coordinate={markerPosition}
+            // coordinate={{
+            //   latitude: location.coords.latitude,
+            //   longitude: location.coords.longitude,
+            // }}
+            coordinate={markerPosition}
             showCallout={true}
             title={title}
-          ></Marker>
+          >
+            {/* <CustomCallout title={title} /> */}
+          </Marker>
 
           {/* {storeInformation.map((item) => (
           
@@ -394,60 +450,52 @@ export default function MapModule({}) {
             </Marker>
           ))} */}
 
+          {/* map the store information every admin */}
           {storeInformation.map((item) => {
             const idnum = item.idno;
             const lat = item.RefillingStation.addLattitude ?? null;
             const long = item.RefillingStation.addLongitude ?? null;
-            if (
-              lat >= cebuCityBounds.south &&
-              lat <= cebuCityBounds.north &&
-              long >= cebuCityBounds.west &&
-              long <= cebuCityBounds.east
-            ) {
-              //console.log("Marker within bounds:",idnum, lat, long); // add this
-              return (
-                <Marker
-                  key={item.id}
-                  coordinate={{
-                    latitude: lat,
-                    longitude: long,
-                  }}
-                  description="Test1"
-                  pinColor={"#87cefa"}
-                  onPress={() => handleStoreMarkerPress(item, location)}
-                  title={item.RefillingStation.stationName}
-                  calloutVisible={true}
-                  callout={{
-                    tooltip: true,
-                    stopPropagation: true,
-                  }}
-                  zIndex={999}
-                  showCallout={true}
-                >
-                  <Callout
-                    tooltip={true}
-                    onPress={() => {
-                      console.log("passing from mapscreen", item);
-                      navigation.navigate("toMapsProductScreen", { item });
-                    }}
-                  >
-                    <View style={styles.callout}>
-                      <Text style={styles.calloutText}>
-                        {item.RefillingStation.stationName}
-                      </Text>
-                      <Text style={{ fontSize: 14, fontWeight: "none" }}>
-                        {item.RefillingStation.status}
-                      </Text>
-                    </View>
-                  </Callout>
 
-                  {/* <MaterialCommunityIcons name="storefront" size={24} color="black" /> */}
-                </Marker>
-              );
-            } else {
-              //console.log("Marker outside bounds:", lat, long); // add this
-              return null;
-            }
+            //console.log("Marker within bounds:",idnum, lat, long); // add this
+            return (
+              <Marker
+                key={item.id}
+                coordinate={{
+                  latitude: lat,
+                  longitude: long,
+                }}
+                description="Test1"
+                pinColor={"#87cefa"}
+                onPress={() => handleStoreMarkerPress(item, location)}
+                title={item.RefillingStation.stationName}
+                calloutVisible={true}
+                callout={{
+                  tooltip: true,
+                  stopPropagation: true,
+                }}
+                zIndex={999}
+                showCallout={true}
+              >
+                <Callout
+                  tooltip={true}
+                  onPress={() => {
+                    console.log("passing from mapscreen", item);
+                    navigation.navigate("toMapsProductScreen", { item });
+                  }}
+                >
+                  <View style={styles.callout}>
+                    <Text style={styles.calloutText}>
+                      {item.RefillingStation.stationName}
+                    </Text>
+                    <Text style={{ fontSize: 14, fontWeight: "none" }}>
+                      {item.RefillingStation.status}
+                    </Text>
+                  </View>
+                </Callout>
+
+                {/* <MaterialCommunityIcons name="storefront" size={24} color="black" /> */}
+              </Marker>
+            );
           })}
 
           {polylineCoords.length > 0 && (
@@ -492,6 +540,7 @@ export default function MapModule({}) {
               />
             )} */}
 
+          {/* view the polyline/ route of the driver on going to customer location */}
           {driverLatLong && (
             <Marker
               coordinate={{
@@ -507,7 +556,7 @@ export default function MapModule({}) {
             </Marker>
           )}
 
-{/* {driverLatLong?.driverLatt && driverLatLong?.driverLong && (
+          {/* {driverLatLong?.driverLatt && driverLatLong?.driverLong && (
   <Marker
     coordinate={{
       latitude: driverLatLong.driverLatt,
@@ -519,7 +568,6 @@ export default function MapModule({}) {
     <FontAwesome name="motorcycle" size={21} color="yellow" />
   </Marker>
 )} */}
-
         </MapView>
       )}
     </View>
@@ -527,6 +575,14 @@ export default function MapModule({}) {
 }
 
 const styles = StyleSheet.create({
+  calloutContainer: {
+    backgroundColor: "white",
+    padding: 10,
+    borderRadius: 5,
+  },
+  calloutTitle: {
+    fontWeight: "bold",
+  },
   markerTitleContainer: {
     position: "absolute",
     top: -30,

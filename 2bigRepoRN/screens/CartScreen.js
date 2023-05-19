@@ -10,7 +10,7 @@ import {
   Modal,
   TextInput,
   ToastAndroid,
-  ActivityIndicator
+  ActivityIndicator,
 } from "react-native";
 import React, {
   useState,
@@ -43,6 +43,7 @@ import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { firebase } from "../firebaseStorage";
 import { useSafeAreaFrame } from "react-native-safe-area-context";
+import { responsiveWidth } from "react-native-responsive-dimensions";
 
 export default function CartScreen() {
   const route = useRoute();
@@ -60,13 +61,14 @@ export default function CartScreen() {
     input_PickupRequest,
     input_SwapWithReservation,
     selectedSwaption,
+    rewardScreenNewModeOfPayment,
   } = route.params ? route.params : {};
   const passedStationName =
     extractedDatas?.refillingStoreProperties?.stationName;
   const passedAdminID = extractedDatas?.adminProperties?.adminID;
   const passedStationStatus =
     extractedDatas?.refillingStoreProperties?.stationStatus;
-
+  //console.log("line 70",rewardScreenNewModeOfPayment)
   const secondItem = item;
   useEffect(() => {
     if (passedTotalAmount !== null) {
@@ -119,11 +121,6 @@ export default function CartScreen() {
   const [customerID, setCustomerID] = useState();
 
   //codees for quantity and get the initial amount-----------------------------------------------------------------------
-  const [waterprice, setWaterprice] = useState(
-    (route.params.selectedItem[0].other_productPrice ||
-      route.params.selectedItem[0].pro_refillPrice) ??
-      null
-  );
 
   const [count, setCount] = useState({});
 
@@ -145,14 +142,14 @@ export default function CartScreen() {
 
     // Calculate the product price
     let waterPrice = 0;
-    if (item.other_productPrice && item.pro_refillPrice) {
+    if (item.thirdparty_productPrice && item.pro_refillPrice) {
       console.log(
         "Error: Both other_productPrice and pro_refillPrice are defined."
       );
-    } else if (item.other_productPrice) {
-      waterPrice = parseFloat(item.other_productPrice);
+    } else if (item.thirdparty_productPrice) {
+      waterPrice = parseFloat(item.thirdparty_productPrice);
       // Apply other product discount
-      waterPrice *= (100 - item.other_productDiscount) / 100;
+      waterPrice *= (100 - item.thirdparty_productDiscount) / 100;
     } else if (item.pro_refillPrice) {
       waterPrice = parseFloat(item.pro_refillPrice);
       // Apply refill product discount
@@ -189,14 +186,14 @@ export default function CartScreen() {
 
     // Calculate the product price
     let waterPrice = 0;
-    if (item.other_productPrice && item.pro_refillPrice) {
+    if (item.thirdparty_productPrice && item.pro_refillPrice) {
       console.log(
         "Error: Both other_productPrice and pro_refillPrice are defined."
       );
-    } else if (item.other_productPrice) {
-      waterPrice = parseFloat(item.other_productPrice);
+    } else if (item.thirdparty_productPrice) {
+      waterPrice = parseFloat(item.thirdparty_productPrice);
       // Apply other product discount
-      waterPrice *= (100 - item.other_productDiscount) / 100;
+      waterPrice *= (100 - item.thirdparty_productDiscount) / 100;
     } else if (item.pro_refillPrice) {
       waterPrice = parseFloat(item.pro_refillPrice);
       // Apply refill product discount
@@ -215,7 +212,7 @@ export default function CartScreen() {
     }
     setCount(newCounts);
     setQuantity(Object.values(newCounts)[0]);
-    console.log("Quantity -->");
+    console.log("Quantity --> is");
     const newInitialAmount = { ...initialAmount };
     const newAmount = (newInitialAmount[currentItemId] || 0) - waterPrice;
     const roundedAmount = parseFloat(newAmount.toFixed(2));
@@ -343,6 +340,7 @@ export default function CartScreen() {
 
         setreservationDeliveryTypes(filteredDeliveryTypes);
       });
+      setText("Reservation Date");
     } else {
       setpassedCombinedData(null);
       setCheckedItemKey_deliveryType(null);
@@ -400,9 +398,11 @@ export default function CartScreen() {
           "To our beloved customer",
           `Schedule delivery time for standard is ${newDeliveryDetails[0].stanDeliveryTime}`
         );
+
+        // console.log("newdelivery data",newDeliveryDetails)
       }
     } else if (item.value === "Reservation") {
-      if (!selectedOrdertype) {
+      if (selectedOrdertype === null) {
         alert("Please select an order type");
       } else if (selectedOrdertype === "PickUp") {
         // console.log("Reservation is press but order type is pick up");
@@ -505,7 +505,7 @@ export default function CartScreen() {
       //   Alert.alert("To our beloved customer", "COD is only for delivery.");
       // }
     } else if (item.value === "Gcash") {
-      setShowModal_ModeOfPayment(true);
+      // setShowModal_ModeOfPayment(true);
     } else {
       navigation.navigate("RewardScreen", {
         passedStationName,
@@ -514,6 +514,8 @@ export default function CartScreen() {
         FinalTotalAmount: parseFloat(FinalTotalAmount),
         customerData,
         selectedItem,
+        paymentMethods,
+        gcashNumber,
       });
       //console.log("inside else",rewardsData);
     }
@@ -580,8 +582,7 @@ export default function CartScreen() {
   };
 
   //modal for swap option and payment method -------------------------------------------------------------------------------------
-  const [showModal_RefillCheckbox, setshowModal_RefillCheckbox] =
-    useState(false);
+
   const [showModal_ModeOfPayment, setShowModal_ModeOfPayment] = useState(false);
   const [reservationModal, setShowReservationModal] = useState(false);
 
@@ -725,16 +726,15 @@ export default function CartScreen() {
 
             const additionalCost =
               parseFloat(standardDeliveryFee) * exceedingDistance;
-            setdeliveyfeeValue(additionalCost);
+            setdeliveyfeeValue(additionalCost.toFixed(2));
             console.log(" Standard additioal cost", additionalCost);
 
             const total = parseFloat(totalInitialAmount) + additionalCost;
             console.log("Standard total result standard", total);
             let subtotal = 0;
             if (totalQuantity >= 6) {
-             
               subtotal = total + vehicle3Fee; //total amount is added by the fee of the vehicle
-             
+
               setvehicleFeeSaveToDb(vehicle3Fee);
               if (!isNaN(subtotal)) {
                 setTotalAmount(subtotal.toFixed(2));
@@ -771,7 +771,7 @@ export default function CartScreen() {
 
               const subtotalAmount =
                 totalInitialAmount + parseFloat(vehicle3Fee);
-                setvehicleFeeSaveToDb(vehicle3Fee);
+              setvehicleFeeSaveToDb(vehicle3Fee);
               if (!isNaN(parseFloat(subtotalAmount).toFixed(2))) {
                 console.log(
                   "ORDER TYPE IS DELIVERY, DELIVERY TYPE IS STANDARD----> QUANTITY IS 6",
@@ -785,7 +785,7 @@ export default function CartScreen() {
               console.log("total quantity is 2 ", totalQuantity);
               const subtotalAmount =
                 totalInitialAmount + parseFloat(vehicle2Fee);
-                setvehicleFeeSaveToDb(vehicle2Fee);
+              setvehicleFeeSaveToDb(vehicle2Fee);
               if (!isNaN(parseFloat(subtotalAmount).toFixed(2))) {
                 console.log(
                   "ORDER TYPE IS DELIVERY, DELIVERY TYPE IS STANDARD----> QUANTITY IS 2 or more but greater then 5",
@@ -800,7 +800,7 @@ export default function CartScreen() {
               console.log("total quantity is 1 ", totalQuantity);
               const subtotalAmount =
                 totalInitialAmount + parseFloat(vehicle1Fee);
-                setvehicleFeeSaveToDb(vehicle1Fee);
+              setvehicleFeeSaveToDb(vehicle1Fee);
               if (!isNaN(parseFloat(subtotalAmount).toFixed(2))) {
                 console.log(
                   "ORDER TYPE IS DELIVERY, DELIVERY TYPE IS STANDARD----> QUANTITY is 1",
@@ -830,7 +830,7 @@ export default function CartScreen() {
             const additionalCost =
               parseFloat(expressDeliveryFee) * exceedingDistance; // time sa pay if pila ang ni exceed
             console.log("Express add cost", additionalCost);
-            setdeliveyfeeValue(additionalCost);
+            setdeliveyfeeValue(additionalCost.toFixed(2));
             const total = parseFloat(totalInitialAmount) + additionalCost; //add ang additional cost plust and totalInitialamount
             let subtotal = 0;
             if (totalQuantity >= 6) {
@@ -877,7 +877,7 @@ export default function CartScreen() {
 
               const subtotalAmount =
                 totalInitialAmount + parseFloat(vehicle3Fee);
-                setvehicleFeeSaveToDb(vehicle3Fee);
+              setvehicleFeeSaveToDb(vehicle3Fee);
               if (!isNaN(parseFloat(subtotalAmount).toFixed(2))) {
                 console.log(
                   "ORDER TYPE IS DELIVERY, DELIVERY TYPE IS EXPRESSS----> QUANTITY IS 6",
@@ -891,7 +891,7 @@ export default function CartScreen() {
               console.log("total quantity is 2 ", totalQuantity);
               const subtotalAmount =
                 totalInitialAmount + parseFloat(vehicle2Fee);
-                setvehicleFeeSaveToDb(vehicle2Fee);
+              setvehicleFeeSaveToDb(vehicle2Fee);
               if (!isNaN(parseFloat(subtotalAmount).toFixed(2))) {
                 console.log(
                   "ORDER TYPE IS DELIVERY, DELIVERY TYPE IS EXPRESSS----> QUANTITY IS 2 or more but greater then 5",
@@ -906,7 +906,7 @@ export default function CartScreen() {
               console.log("total quantity is 1 ", totalQuantity);
               const subtotalAmount =
                 totalInitialAmount + parseFloat(vehicle1Fee);
-                setvehicleFeeSaveToDb(vehicle1Fee);
+              setvehicleFeeSaveToDb(vehicle1Fee);
               if (!isNaN(parseFloat(subtotalAmount).toFixed(2))) {
                 console.log(
                   "ORDER TYPE IS DELIVERY, DELIVERY TYPE IS EXPRESSS----> QUANTITY is 1",
@@ -938,7 +938,7 @@ export default function CartScreen() {
 
               const additionalCost =
                 parseFloat(standardDeliveryFee) * exceedingDistance;
-              setdeliveyfeeValue(additionalCost);
+              setdeliveyfeeValue(additionalCost.toFixed(2));
               console.log(
                 " reservation Standard additioal cost",
                 additionalCost
@@ -991,8 +991,8 @@ export default function CartScreen() {
 
                 const subtotalAmount =
                   totalInitialAmount + parseFloat(vehicle3Fee);
-                  setvehicleFeeSaveToDb(vehicle3Fee);
-                  
+                setvehicleFeeSaveToDb(vehicle3Fee);
+
                 if (!isNaN(parseFloat(subtotalAmount).toFixed(2))) {
                   console.log(
                     "ORDER TYPE IS DELIVERY, DELIVERY TYPE IS STANDARD----> QUANTITY IS 6",
@@ -1006,7 +1006,7 @@ export default function CartScreen() {
                 console.log("total quantity is 2 ", totalQuantity);
                 const subtotalAmount =
                   totalInitialAmount + parseFloat(vehicle2Fee);
-                  setvehicleFeeSaveToDb(vehicle2Fee);
+                setvehicleFeeSaveToDb(vehicle2Fee);
                 if (!isNaN(parseFloat(subtotalAmount).toFixed(2))) {
                   console.log(
                     "ORDER TYPE IS DELIVERY, DELIVERY TYPE IS STANDARD----> QUANTITY IS 2 or more but greater then 5",
@@ -1021,7 +1021,7 @@ export default function CartScreen() {
                 console.log("total quantity is 1 ", totalQuantity);
                 const subtotalAmount =
                   totalInitialAmount + parseFloat(vehicle1Fee);
-                  setvehicleFeeSaveToDb(vehicle1Fee);
+                setvehicleFeeSaveToDb(vehicle1Fee);
                 if (!isNaN(parseFloat(subtotalAmount).toFixed(2))) {
                   console.log(
                     "ORDER TYPE IS DELIVERY, DELIVERY TYPE IS STANDARD----> QUANTITY is 1",
@@ -1044,7 +1044,7 @@ export default function CartScreen() {
               const additionalCost =
                 parseFloat(expressDeliveryFee) * exceedingDistance; // time sa pay if pila ang ni exceed
               console.log("Express add cost", additionalCost);
-              setdeliveyfeeValue(additionalCost);
+              setdeliveyfeeValue(additionalCost.toFixed(2));
               const total = parseFloat(totalInitialAmount) + additionalCost; //add ang additional cost plust and totalInitialamount
               let subtotal = 0;
               if (totalQuantity >= 6) {
@@ -1090,7 +1090,7 @@ export default function CartScreen() {
 
                 const subtotalAmount =
                   totalInitialAmount + parseFloat(vehicle3Fee);
-                  setvehicleFeeSaveToDb(vehicle3Fee);
+                setvehicleFeeSaveToDb(vehicle3Fee);
                 if (!isNaN(parseFloat(subtotalAmount).toFixed(2))) {
                   console.log(
                     "ORDER TYPE IS DELIVERY, DELIVERY TYPE IS STANDARD----> QUANTITY IS 6",
@@ -1104,7 +1104,7 @@ export default function CartScreen() {
                 console.log("total quantity is 2 ", totalQuantity);
                 const subtotalAmount =
                   totalInitialAmount + parseFloat(vehicle2Fee);
-                  setvehicleFeeSaveToDb(vehicle2Fee);
+                setvehicleFeeSaveToDb(vehicle2Fee);
                 if (!isNaN(parseFloat(subtotalAmount).toFixed(2))) {
                   console.log(
                     "ORDER TYPE IS DELIVERY, DELIVERY TYPE IS STANDARD----> QUANTITY IS 2 or more but greater then 5",
@@ -1119,7 +1119,7 @@ export default function CartScreen() {
                 console.log("total quantity is 1 ", totalQuantity);
                 const subtotalAmount =
                   totalInitialAmount + parseFloat(vehicle1Fee);
-                  setvehicleFeeSaveToDb(vehicle1Fee);
+                setvehicleFeeSaveToDb(vehicle1Fee);
                 if (!isNaN(parseFloat(subtotalAmount).toFixed(2))) {
                   console.log(
                     "ORDER TYPE IS DELIVERY, DELIVERY TYPE IS STANDARD----> QUANTITY is 1",
@@ -1189,7 +1189,7 @@ export default function CartScreen() {
   // console.log("line 612313131388", gcashProofImage);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [fileNameInput, setFilenameInput] = useState("");
-
+  const [gcashProoflink_Storage, setgcashProoflink_Storage] = useState();
   const handleUploadImage = async () => {
     //check if the gcashProofImage if naa ba sulod or wala
     if (gcashProofImage === null) {
@@ -1203,11 +1203,11 @@ export default function CartScreen() {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: [4, 3],
+      aspect: [4, 5],
       quality: 1,
     }); //get the image from library in local image
 
-    console.log(result);
+    console.log("result after image is picked", result);
 
     if (!result.canceled) {
       setGgcashProofImage(result.uri);
@@ -1251,11 +1251,47 @@ export default function CartScreen() {
         snapshot.snapshot.ref.getDownloadURL().then((url) => {
           setUploadingImage(false);
           console.log("Download URL: ", url);
-          setgcashProoflink_Storage(url);
+
           setGgcashProofImage(url);
           blob.close();
-          Alert.alert("Thank you for uploading the image.");
-          // setShowModal_ModeOfPayment(false);
+          setgcashProoflink_Storage(url);
+          //  console.log("before the createOrder", gcashProoflink_Storage);
+          createOrder(customerData.cusId, url);
+          setShowModal_ModeOfPayment(false);
+          ToastAndroid.show(
+            "INSIDE THE UPLOAD IMAGE FUNCTION-->Order successfully. Thank you for ordering" +
+              " " +
+              passedStationName +
+              ".",
+            ToastAndroid.LONG
+          );
+
+          // Alert.alert(
+          //   "Order confirmed",
+          //   `Order successfully. Thank you for ordering ${passedStationName}.`,
+          //   [
+          //     {
+          //       text: "Okay",
+          //       onPress: () => {
+          //        // setgcashProoflink_Storage(url);
+          //        console.log("before the createOrder",gcashProoflink_Storage)
+          //         createOrder(customerData.cusId,gcashProoflink_Storage);
+          //         // ToastAndroid.show(
+          //         //   "Order successfully. Thank you for ordering" +
+          //         //     " " +
+          //         //     passedStationName +
+          //         //     ".",
+          //         //   ToastAndroid.LONG
+          //         // );
+          //         setShowModal_ModeOfPayment(false);
+          //       },
+          //     },
+          //     // ,{
+          //     //   text:"Cancel",
+          //     // }
+          //   ]
+          // );
+
           return url;
         });
       }
@@ -1279,10 +1315,10 @@ export default function CartScreen() {
   }, [totalAmount, totalPickUpfee]);
 
   //Save to ORDER/CUSTOMERSLOG/NOTIFICATION database-------------------------------------------------------------
-  const [vehicleFeeSaveToDb,setvehicleFeeSaveToDb]=useState();
+  const [vehicleFeeSaveToDb, setvehicleFeeSaveToDb] = useState();
   const [waterproduct, setWaterproduct] = useState(
     (route.params.selectedItem[0].pro_refillWaterType ||
-      route.params.selectedItem[0].other_productName) ??
+      route.params.selectedItem[0].pro_refillWaterType) ??
       null
   );
 
@@ -1292,13 +1328,12 @@ export default function CartScreen() {
   }`;
 
   const order_Unit = `${
-    (selectedItem && selectedItem[0].pro_refillUnit) ||
+    (selectedItem && selectedItem[0].pro_refillUnitVolume) ||
     selectedItem[0].other_productUnit
   }`;
 
   const [quantity, setQuantity] = useState(count);
-  const [pointsAddedvalue, setpointsAddedvalue] = useState(0);
- 
+
   const [orderTypeValue, setOrderTypeValue] = useState(); //pass the order Type  value, "??" is used to check if null ba or di
   const [deliveryTypeValue, setdeliveryTypeValue] = useState();
 
@@ -1309,31 +1344,39 @@ export default function CartScreen() {
   ] = useState("");
   const [reservationTime, setreservation_ReserveDeliveryTypes] = useState("");
   const [orderStatus, setOrderStatus] = useState("Pending");
-  const [gcashProoflink_Storage, setgcashProoflink_Storage] = useState();
+
+  // console.log("Gcash link",gcashProoflink_Storage)
   //setselectedPaymentMethod
   const [selectedpaymenthod, setselectedPaymentMethod] = useState();
-
+  console.log("selected payment method", selectedpaymenthod);
+  const [selectedpaymentMethod_Gcash, setselectedpaymentMethod_Gcash] =
+    useState();
   //get rewardspoints collection from REWARDSYSTEM COLLECTION passedAdminID
 
   useLayoutEffect(() => {
-    const rewardsRef = ref(db, "REWARDSYSTEMTEST/");
-    const rewardsQuery = query(
-      rewardsRef,
-      orderByChild("adminId"),
-      equalTo(passedAdminID)
-    );
-    onValue(rewardsQuery, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const rewardsInfo = Object.keys(data).map((key) => ({
-          id: key,
+    if (passedAdminID) {
+      const rewardsRef = ref(db, "REWARDSYSTEM/");
+      const rewardsQuery = query(
+        rewardsRef,
+        orderByChild("adminId"),
+        equalTo(passedAdminID)
+      );
+      onValue(rewardsQuery, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          const rewardsInfo = Object.keys(data).map((key) => ({
+            id: key,
 
-          ...data[key],
-        }));
-       // console.log("rewards data",rewardsInfo);
-        setrewardsData(rewardsInfo);
-      }
-    });
+            ...data[key],
+          }));
+          console.log("rewards data", rewardsInfo);
+          setrewardsData(rewardsInfo);
+        } else {
+          console.log("Else here");
+          setrewardsData([]);
+        }
+      });
+    }
   }, [passedAdminID]);
   const [rewardsData, setrewardsData] = useState();
   //handle submit code here-------------------------------------------------------------------------------------
@@ -1387,48 +1430,91 @@ export default function CartScreen() {
           }
         } else {
           // handle button press here
-
-          createOrder(customerData.cusId); //call this if all data is fill up
+          // console.log("else here");
+          // createOrder(customerData.cusId); //call this if all data is fill up
+          if (selectedpaymenthod === "Gcash") {
+            if (gcashProofImage === null) {
+              // console.log("line 1424, gcashproof is null");
+              setShowModal_ModeOfPayment(true);
+            }
+          } else if (selectedpaymenthod === "Points") {
+            //  console.log(" LINE 1419selectedpaymenthod=Points");
+            if (
+              rewardScreenNewModeOfPayment === "Gcash" &&
+              gcashProofImage === null
+            ) {
+              // console.log(
+              //   "LINE 1421 rewardScreenNewModeOfPayment=Gcash and gcashProofImage == null"
+              // );
+              setShowModal_ModeOfPayment(true);
+            } else {
+              createOrder(customerData.cusId, gcashProoflink_Storage); //call this if all data is fill up
+              ToastAndroid.show(
+                "Order successfully. Thank you for ordering" +
+                  " " +
+                  passedStationName +
+                  ".",
+                ToastAndroid.LONG
+              );
+            }
+          } else {
+            createOrder(customerData.cusId); //call this if all data is fill up
+            ToastAndroid.show(
+              "Order successfully. Thank you for ordering" +
+                " " +
+                passedStationName +
+                ".",
+              ToastAndroid.LONG
+            );
+          }
         }
       }
     }
   };
-
-  const createOrder = (CUSTOMERID) => {
+  //console.log("babaw sa createOrder", gcashProoflink_Storage);
+  const createOrder = (CUSTOMERID, gcashProoflink_Storage) => {
     const RandomId = Math.floor(Math.random() * 50000) + 10000;
-
+    //console.log("inside  sa createOrder", gcashProoflink_Storage);
     const newOrderKey = RandomId;
     const orderData = {
       orderID: newOrderKey,
       admin_ID: passedAdminID,
       order_StoreName: passedStationName,
       cusId: CUSTOMERID,
-      order_overAllQuantities: totalQuantity,
 
-      order_TotalAmount: parseFloat(FinalTotalAmount),
       SwapwithConditionMessage: passedSelectedSwapOption_Vaue ?? null,
       order_RefillSelectedOption: passedSelectedSwapOption ?? null,
 
+      order_overAllQuantities: totalQuantity,
+      orderDate: currentDate,
+      order_InitialAmount: parseFloat(totalInitialAmount),
+      order_GcashProofOfPayment: gcashProoflink_Storage || null,
+      orderDeliveryfee: parseFloat(deliveyfeeValue) || 0,
+      orderPickUpFee: totalPickUpfee ?? null,
+      ordervehiclefee: vehicleFeeSaveToDb ?? null,
+      order_SubTotal: parseFloat(totalAmount) ?? null,
+      order_TotalAmount: parseFloat(FinalTotalAmount) ?? null,
+      orderPaymentMethod: selectedpaymenthod ? selectedpaymenthod : null,
+      orderPaymentMethod2: rewardScreenNewModeOfPayment ?? null,
+
       order_DeliveryTypeValue: deliveryTypeValue,
       order_OrderTypeValue: orderTypeValue,
-      order_GcashProofOfPayment: gcashProoflink_Storage ?? null,
       order_OrderStatus: orderStatus,
       order_ReservationDate: reservationDate ?? null,
       //map every item choosen by the customer
       order_Products: passedData_SelectedItem.map((item) => ({
-        order_ProductId: item.pro_refillId || item.other_productId,
+        order_ProductId: item.pro_refillId || item.thirdparty_productId,
         offerType: item.offerType,
-        order_ProductName: item.pro_refillWaterType || item.other_productName,
-        order_unit: item.pro_refillUnit || item.other_productUnit,
-        order_size: +item.pro_refillSize || +item.other_productSize,
-        order_ProductPrice: +item.pro_refillPrice || +item.other_productPrice,
-        qtyPerItem: count[item.pro_refillId || item.other_productId] || 0,
+        order_ProductName:
+          item.pro_refillWaterType || item.thirdparty_productName,
+        pro_refillUnitVolume:
+          item.pro_refillUnitVolume || item.thirdparty_productUnitVolume,
+        pro_refillQty: +item.pro_refillQty || +item.thirdparty_productQty,
+        order_ProductPrice:
+          +item.pro_refillPrice || +item.thirdparty_productPrice,
+        qtyPerItem: count[item.pro_refillId || item.thirdparty_productId] || 0,
       })),
-      orderDeliveryfee:deliveyfeeValue ?? null,
-      orderPickUpFee:totalPickUpfee??null,
-      ordervehiclefee: vehicleFeeSaveToDb ??  null,
-      order_SubTotal:parseFloat(totalAmount) ?? null,
-      orderPaymentMethod: selectedpaymenthod ? selectedpaymenthod : null,
+
       order_newDeliveryAddressOption: combinedData
         ? combinedData.DeliveryAddress
         : null,
@@ -1474,17 +1560,7 @@ export default function CartScreen() {
         // console.log('Test if Save to db-----'+reservationDate );
         console.log("New Order with the Order ID of --->", newOrderKey);
 
-        ToastAndroid.show(
-          "Order successfully. Thank you for ordering" +
-            " " +
-            passedStationName +
-            ".",
-          ToastAndroid.LONG
-        );
-        // Delay for 2 seconds (2000 milliseconds)
-        // setTimeout(() => {
-        //   navigation.navigate("toProductScreen");
-        // }, 2000);
+        //  Delay for 2 seconds (2000 milliseconds)
 
         //reset input fields
         setCheckedItemKey_deliveryType(null);
@@ -1502,8 +1578,12 @@ export default function CartScreen() {
         setreservation_ReserveDeliveryTypes("");
         setCount(0);
         setText("Reservation Date");
+        setFinalTotalAmount();
         setdeliveyfeeValue(0);
-        setFinalTotalAmount(0);
+        setgcashProoflink_Storage(null);
+        // setTimeout(() => {
+        //   navigation.navigate("Order");
+        // }, 2000);
       })
       .catch((error) => {
         console.log("Error Saving to Database", error);
@@ -1512,187 +1592,183 @@ export default function CartScreen() {
 
     // update the customer points based on the admin choices
     console.log("pass rewards data inside the create order", rewardsData);
-    console.log(
-      "pass rewards data inside the create order",
-      typeof rewardsData
-    );
-    console.log(
-      "rewardsData[0].rewardWaysToEarn:",
-      Object.values(rewardsData)[0].rewardWaysToEarn
-    );
+    // console.log(
+    //   "pass rewards data inside the create order",
+    //   typeof rewardsData
+    // );
+    // console.log(
+    //   "rewardsData[0].rewardWaysToEarn:",
+    //   Object.values(rewardsData)[0].rewardWaysToEarn
+    // );
 
-    let pointsTobeAddedd=0;
+    let pointsTobeAddedd = 0;
     //per amount new codes
-
-    if (
-      rewardsData &&
-      Object.values(rewardsData)[0].rewardWaysToEarn === "per amount"
-    ) {
-      const customer =
-        customerData &&
-        typeof customerData === "object" &&
-        Object.keys(customerData).find(
-          (key) => customerData[key].cusId === CUSTOMERID
-        );
-      console.log("what is customer:", customer);
-      console.log("what is customer 1119", typeof CUSTOMERID, CUSTOMERID);
+    if (rewardsData && rewardsData.length > 0) {
       if (
-        typeof customerData === "object" &&
-        customerData.cusId === CUSTOMERID
+        rewardsData &&
+        Object.values(rewardsData)[0] &&
+        Object.values(rewardsData)[0].rewardWaysToEarn === "per amount" &&
+        Object.values(rewardsData)[0].rewardWaysToEarn
       ) {
-        console.log("Before this if line 1577");
-
-        console.log(
-          "rewardsData[0].reward_minRange_perAmount:",
-          Object.values(rewardsData)[0].reward_minRange_perAmount,
-          typeof Object.values(rewardsData)[0].reward_minRange_perAmount
-        );
+        const customer =
+          customerData &&
+          typeof customerData === "object" &&
+          Object.keys(customerData).find(
+            (key) => customerData[key].cusId === CUSTOMERID
+          );
+        //console.log("what is customer:", customer);
+        //console.log("what is customer 1119", typeof CUSTOMERID, CUSTOMERID);
         if (
-          parseFloat(FinalTotalAmount) >=
-          parseFloat(rewardsData[0].reward_minRange_perAmount)  &&
-          parseFloat(FinalTotalAmount) <=
-           parseFloat(rewardsData[0].reward_maxRange_perAmount)
+          typeof customerData === "object" &&
+          customerData.cusId === CUSTOMERID
         ) {
-          // Customer spent between 150 and 300 (inclusive), so earn 1 point per amount spent
-          // pointsEarned = FinalTotalAmount * rewardsData[0].rewardPointsToEarn;
-          console.log(
-            "Customer spent between 150 and 300 (inclusive), so earn 1 point per amount spent"
-          );
-          //etpointsAddedvalue(rewardsData[0].rewardPointsToEarn);
-          pointsTobeAddedd=rewardsData[0].rewardPointsToEarn;
-          const customerPointsRef = ref(db, `CUSTOMER/${CUSTOMERID}`); //get the db reference
-          get(customerPointsRef).then((snapshot) => {
-            const walletPoints = snapshot.val().walletPoints || 0;
-            const updatedPoints =
-             parseFloat(walletPoints)  +parseFloat(rewardsData[0].rewardPointsToEarn) ; //update the walletPoints;
+          if (
+            parseFloat(FinalTotalAmount) >=
+              parseFloat(rewardsData[0].reward_minRange_perAmount) &&
+            parseFloat(FinalTotalAmount) <=
+              parseFloat(rewardsData[0].reward_maxRange_perAmount)
+          ) {
+            pointsTobeAddedd = rewardsData[0].rewardPointsToEarn;
+            const customerPointsRef = ref(db, `CUSTOMER/${CUSTOMERID}`); //get the db reference
+            get(customerPointsRef).then((snapshot) => {
+              const walletPoints = snapshot.val().walletPoints || 0;
+              const updatedPoints =
+                parseFloat(walletPoints) +
+                parseFloat(rewardsData[0].rewardPointsToEarn); //update the walletPoints;
 
-           
-            console.log("line 1535",rewardsData[0].rewardPointsToEarn);
-            update(customerPointsRef, { walletPoints: updatedPoints })
-              .then(() => {
-                
-                console.log(
-                  "Range between set of admin-->Per Amount--->Customer points updated successfully!"
-                );
-              })
-              .catch((error) => {
-                console.error("Error updating customer points: ", error);
-              });
-          });
-        } else if (
-          parseFloat(FinalTotalAmount) >
-          parseFloat(rewardsData[0].reward_maxRange_perAmount)
-        ) {
-          
-          // Customer spent more than 300, so earn 1 point per amount spent plus an additional 1 point
-          console.log(
-            "Customer spent more than 300, so earn 1 point per amount spent plus an additional 1 point"
-          );
-          pointsTobeAddedd=rewardsData[0].rewardPointsToEarn + 1;
-          //setpointsAddedvalue(rewardsData[0].rewardPointsToEarn + 1);
-          console.log(
-            "Customer spent more than 300, so earn 1 point per amount spent plus an additional 1 point",rewardsData[0].rewardPointsToEarn + 1
-          );
-          const customerPointsRef = ref(db, `CUSTOMER/${CUSTOMERID}`); //get the db reference
-          get(customerPointsRef).then((snapshot) => {
-            const walletPoints = snapshot.val().walletPoints || 0;
-            const updatedPoints =
-            parseFloat(walletPoints)  +parseFloat(rewardsData[0].rewardPointsToEarn+1) ; //update the walletPoints;
-           
-
-            update(customerPointsRef, { walletPoints: updatedPoints })
-
-              .then(() => {
-               
-                console.log(
-                  "Range between set of admin-->Per Amount--->Customer points updated successfully!"
-                );
-              })
-              .catch((error) => {
-                console.error("Error updating customer points: ", error);
-              });
-          });
-        } else if (
-          parseFloat(FinalTotalAmount) >=
-          parseFloat(rewardsData[0].reward_minRange_perAmount)
-        ) {
-         // setpointsAddedvalue(rewardsData[0].rewardPointsToEarn); 
-         pointsTobeAddedd=rewardsData[0].rewardPointsToEarn;
-          const customerPointsRef = ref(db, `CUSTOMER/${CUSTOMERID}`); //get the db reference
-          get(customerPointsRef).then((snapshot) => {
-            const walletPoints = snapshot.val().walletPoints || 0;
-            const updatedPoints =
-             parseFloat(walletPoints)  + parseFloat(rewardsData[0].rewardPointsToEarn); //update the walletPoints;
-
-           
-
-            update(customerPointsRef, { walletPoints: updatedPoints })
-              .then(() => {
-               
-                console.log(
-                  "Range between set of admin-->Per Amount--->Customer points updated successfully!"
-                );
-              })
-              .catch((error) => {
-                console.error("Error updating customer points: ", error);
-              });
-          });
-        }
-        else{
-          console.log("Total amount is less than all")
-        }
-
-      }
-    } else 
-    {
-      //per transaction
-      const customer =
-        customerData &&
-        typeof customerData === "object" &&
-        Object.keys(customerData).find(
-          (key) => customerData[key].cusId === CUSTOMERID
-        );
-      console.log("what is customer:", customer);
-      console.log("what is customer 1119", typeof CUSTOMERID, CUSTOMERID);
-      if (
-        typeof customerData === "object" &&
-        customerData.cusId === CUSTOMERID
-      ) {
-        const customerPointsRef = ref(db, `CUSTOMER/${CUSTOMERID}`); //get the db reference
-        // Use the `get` method to retrieve the current walletPoints value
-        get(customerPointsRef).then((snapshot) => {
-          const walletPoints = snapshot.val().walletPoints || 0;
-          const updatedPoints =
-            walletPoints + rewardsData[0].rewardPointsToEarn; //update the walletPoints
-          
-          update(customerPointsRef, { walletPoints: updatedPoints })
-            .then(() => {
-              setpointsAddedvalue(rewardsData[0].rewardPointsToEarn);
-              console.log(
-                "Per transaction--->Customer points updated successfully!"
-              );
-            })
-            .catch((error) => {
-              console.error("Error updating customer points: ", error);
+              //console.log("line 1535", rewardsData[0].rewardPointsToEarn);
+              update(customerPointsRef, { walletPoints: updatedPoints })
+                .then(() => {
+                  console.log(
+                    "Range between set of admin-->Per Amount--->Customer points updated successfully!"
+                  );
+                })
+                .catch((error) => {
+                  console.error("Error updating customer points: ", error);
+                });
             });
-        });
+          } else if (
+            parseFloat(FinalTotalAmount) >
+            parseFloat(rewardsData[0].reward_maxRange_perAmount)
+          ) {
+            // Customer spent more than 300, so earn 1 point per amount spent plus an additional 1 point
+            console.log(
+              "Customer spent more than 300, so earn 1 point per amount spent plus an additional 1 point"
+            );
+            // pointsTobeAddedd =
+            //   rewardsData && rewardsData[0] && rewardsData[0].rewardPointsToEarn
+            //     ? rewardsData[0].rewardPointsToEarn + 1
+            //     : null;
+            pointsTobeAddedd =
+              parseFloat(rewardsData[0].rewardPointsToEarn) + 1;
+            console.log(
+              "Customer spent more than 300, so earn 1 point per amount spent plus an additional 1 point",
+              parseFloat(rewardsData[0].rewardPointsToEarn) + 1
+            );
+            const customerPointsRef = ref(db, `CUSTOMER/${CUSTOMERID}`); //get the db reference
+            get(customerPointsRef).then((snapshot) => {
+              const walletPoints = snapshot.val().walletPoints || 0;
+              const updatedPoints =
+                parseFloat(walletPoints) +
+                parseFloat(rewardsData[0].rewardPointsToEarn) +
+                1;
+              //update the walletPoints;
+              console.log("updated", updatedPoints);
+              update(customerPointsRef, { walletPoints: updatedPoints })
+                .then(() => {
+                  console.log(
+                    "More than set of maximum-->Per Amount--->Customer points updated successfully!"
+                  );
+                })
+                .catch((error) => {
+                  console.error("Error updating customer points: ", error);
+                });
+            });
+          } else if (
+            parseFloat(FinalTotalAmount) >=
+            parseFloat(rewardsData[0].reward_minRange_perAmount)
+          ) {
+            pointsTobeAddedd = rewardsData && rewardsData[0].rewardPointsToEarn;
+            const customerPointsRef = ref(db, `CUSTOMER/${CUSTOMERID}`); //get the db reference
+            get(customerPointsRef).then((snapshot) => {
+              const walletPoints = snapshot.val().walletPoints || 0;
+              const updatedPoints =
+                parseFloat(walletPoints) +
+                parseFloat(rewardsData && rewardsData[0].rewardPointsToEarn); //update the walletPoints;
+
+              update(customerPointsRef, { walletPoints: updatedPoints })
+                .then(() => {
+                  console.log(
+                    "Range between set of admin-->Per Amount--->Customer points updated successfully!"
+                  );
+                })
+                .catch((error) => {
+                  console.error("Error updating customer points: ", error);
+                });
+            });
+          } else {
+            console.log("Total amount is less than all");
+          }
+        }
+      } else {
+        //per transaction
+        const customer =
+          customerData &&
+          typeof customerData === "object" &&
+          Object.keys(customerData).find(
+            (key) => customerData[key].cusId === CUSTOMERID
+          );
+       // console.log("what is customer:", customer);
+        //console.log("what is customer 1119", typeof CUSTOMERID, CUSTOMERID);
+        if (
+          typeof customerData === "object" &&
+          customerData.cusId === CUSTOMERID
+        ) {
+          pointsTobeAddedd = rewardsData && parseFloat( rewardsData[0].rewardPointsToEarn);
+          const customerPointsRef = ref(db, `CUSTOMER/${CUSTOMERID}`); //get the db reference
+          // Use the `get` method to retrieve the current walletPoints value
+          get(customerPointsRef).then((snapshot) => {
+            const walletPoints = snapshot.val().walletPoints || 0;
+            const updatedPoints =
+              parseFloat(walletPoints) +
+              parseFloat(rewardsData[0].rewardPointsToEarn); //update the walletPoints
+            //pointsToAdd= parseFloat(rewardsData[0].rewardPointsToEarn);
+            // console.log("line 1734",pointsToAdd);
+            // pointsTobeAddedd=pointsToAdd;
+            // console.log("line 1736",pointsTobeAddedd);
+            console.log("line 1737", updatedPoints);
+            update(customerPointsRef, { walletPoints: updatedPoints })
+              .then(() => {
+               
+                console.log(
+                  "Per transaction--->Customer points updated successfully!"
+                );
+              })
+              .catch((error) => {
+                console.error("Error updating customer points: ", error);
+              });
+          });
+
+
+        }
       }
+    } else {
+      console.log("No data available for reward data");
     }
-    
 
     //save to user log collection
     const action = "Order";
-   // console.log("Points added 1632",pointsAddedvalue)
+    //console.log("Points added 1754 above the customersLog", pointsTobeAddedd);
     const pointsUpdate = "pointsAdded";
     const userLogRandomId = Math.floor(Math.random() * 50000) + 10000;
     const newUserlogKey = userLogRandomId;
-    set(ref(db, `CUSTOMERSLOGTEST/${newUserlogKey}`), {
+    set(ref(db, `CUSTOMERSLOG/${newUserlogKey}`), {
       orderID: newOrderKey,
       cusId: CUSTOMERID,
       orderDate: currentDate,
       logsPerformed: action,
       pointsUpdate: pointsUpdate,
-      pointsAddedValue:pointsTobeAddedd,
+      pointsAddedValue: pointsTobeAddedd,
     })
       .then(async () => {
         // console.log('Test if Save to db-----'+reservationDate );
@@ -1743,6 +1819,9 @@ export default function CartScreen() {
       });
   };
 
+  {
+    /*RETURN JSX */
+  }
   return (
     <View style={styles.container}>
       {/* modal for gcash payment */}
@@ -1790,7 +1869,7 @@ export default function CartScreen() {
             </View>
             <View style={{ padding: 5, marginLeft: 3 }}>
               <Text style={{ fontFamily: "nunito-light" }}>
-                Please send your payment thru this {gcashNumber}.
+                Please send your payment thru this 0{gcashNumber}.
               </Text>
             </View>
 
@@ -2155,28 +2234,60 @@ export default function CartScreen() {
                     <View style={styles.square}>
                       <Image
                         source={{
-                          uri: item.pro_Image || item.other_productImage,
+                          uri: item.pro_Image || item.thirdparty_productImage,
                         }}
                         style={styles.storePhotoStyle}
                       />
                     </View>
 
                     <View style={{ backgroundColor: "transparent" }}>
+                      {/* <Text style={styles.storeNameStyles}>
+                        {item.pro_refillWaterType.substring(0, 20) + "..."
+            ||
+                          item.thirdparty_productName
+                          .substring(0, 20) + "..."}
+                      </Text> */}
                       <Text style={styles.storeNameStyles}>
-                        {item.pro_refillWaterType ||
-                          item.other_productName.substring(0, 20) + "..."}
+                        {item.pro_refillWaterType
+                          ? item.pro_refillWaterType.substring(0, 20) + "..."
+                          : item.thirdparty_productName
+                          ? item.thirdparty_productName.substring(0, 20) + "..."
+                          : ""}
                       </Text>
 
                       <Text style={styles.storeStatusStyles}>
-                        {item.pro_refillSize || item.other_productSize}{" "}
-                        {item.pro_refillUnit || item.other_productUnit}
+                        {item.thirdparty_productQty || item.pro_refillQty}{" "}
+                        {item.thirdparty_productUnitVolume ||
+                          item.pro_refillUnitVolume}
                       </Text>
-                      <Text style={styles.storeStatusStyles}>
+
+                      {/* <Text style={styles.storeStatusStyles}>
                         Product's Promo{" "}
-                        {item.pro_discount || item.other_productDiscount}%
-                      </Text>
+                        {item.pro_discount || item.thirdparty_productDiscount}%
+                      </Text> */}
+                      {(item.pro_discount &&
+                        item.pro_discount !== "0" &&
+                        item.pro_discount.trim() !== "") ||
+                      (item.thirdparty_productDiscount &&
+                        item.thirdparty_productDiscount !== "0" &&
+                        item.thirdparty_productDiscount.trim() !== "") ? (
+                        <Text
+                          style={{ fontSize: 15, fontFamily: "nunito-light" }}
+                        >
+                          Product's discount{" "}
+                          {item.pro_discount || item.thirdparty_productDiscount}
+                          %
+                        </Text>
+                      ) : (
+                        <Text
+                          style={{ fontSize: 15, fontFamily: "nunito-light" }}
+                        >
+                          No available discount
+                        </Text>
+                      )}
+
                       <Text style={styles.storeStatusStyles}>
-                        ₱{item.pro_refillPrice || item.other_productPrice}
+                        ₱{item.pro_refillPrice || item.thirdparty_productPrice}
                       </Text>
                     </View>
                   </View>
@@ -2186,14 +2297,23 @@ export default function CartScreen() {
                       <TouchableOpacity onPress={() => handleIncrement(item)}>
                         <Image
                           source={require("../assets/plusIcon.png")}
-                          style={{ width: 25, height: 25,backgroundColor:'transparent' }}
+                          style={{
+                            width: 25,
+                            height: 25,
+                            backgroundColor: "transparent",
+                          }}
                         />
                       </TouchableOpacity>
 
                       <TouchableOpacity onPress={() => handleDecrement(item)}>
                         <Image
                           source={require("../assets/minus-math.png")}
-                          style={{ width: 25, height: 25, marginTop: 20 ,backgroundColor:'transparent'}}
+                          style={{
+                            width: 25,
+                            height: 25,
+                            marginTop: 20,
+                            backgroundColor: "transparent",
+                          }}
                         />
                       </TouchableOpacity>
                     </View>
@@ -2211,8 +2331,8 @@ export default function CartScreen() {
                           textAlign: "right",
                         }}
                       >
-                        ₱{item.pro_refillPrice || item.other_productPrice} x{" "}
-                        {count[item.id] || 0}
+                        ₱{item.pro_refillPrice || item.thirdparty_productPrice}{" "}
+                        x {count[item.id] || 0}
                       </Text>
                     </View>
 
@@ -2275,7 +2395,7 @@ export default function CartScreen() {
               }}
             >
               <Text style={{ fontSize: 16, fontFamily: "nunito-semibold" }}>
-              Initial Amount- ₱ {totalInitialAmount.toFixed(2) || 0}
+                Initial Amount- ₱ {totalInitialAmount.toFixed(2) || 0}
               </Text>
             </View>
           </View>
@@ -2301,7 +2421,7 @@ export default function CartScreen() {
           </View>
           <View
             style={{
-              backgroundColor: "transparent",
+              backgroundColor: "gray",
               width: "95%",
               marginLeft: 10,
               marginTop: 15,
@@ -2326,17 +2446,18 @@ export default function CartScreen() {
                     <View
                       key={item.key}
                       style={{
-                        // backgroundColor: "red",
+                        backgroundColor: "red",
                         marginTop: 35,
                         height: 25,
                         borderRadius: 5,
                         padding: 0,
                         flexDirection: "row",
-                        width: 100,
+                        width: responsiveWidth(30),
 
                         justifyContent: "center",
-                        marginLeft: -70,
-                        marginRight: 63,
+                        marginLeft: responsiveWidth(-19),
+                        marginRight:responsiveWidth(20),
+                        //marginRight: 63,
                         // elevation: 2,
                         alignItems: "center",
                       }}
@@ -2355,8 +2476,8 @@ export default function CartScreen() {
                       >
                         <View
                           style={{
-                            width: 18,
-                            height: 18,
+                            width: 20,
+                            height: 20,
                             borderWidth: 1,
                             borderRadius: 4,
                             justifyContent: "center",
@@ -2373,7 +2494,7 @@ export default function CartScreen() {
                           {isChecked && (
                             <MaterialIcons
                               name="done"
-                              size={15}
+                              size={16}
                               color="black"
                               styles={{ alignItems: "center" }}
                             />
@@ -2383,7 +2504,7 @@ export default function CartScreen() {
                       <Text
                         style={{
                           fontFamily: "nunito-light",
-                          fontSize: 16,
+                          fontSize: 17,
                           flexDirection: "row",
                           // color:
                           //   selectedDeliveryType === "Express"
@@ -2451,8 +2572,8 @@ export default function CartScreen() {
                       >
                         <View
                           style={{
-                            width: 18,
-                            height: 18,
+                            width: 20,
+                            height: 20,
                             borderWidth: 1,
                             borderRadius: 4,
                             justifyContent: "center",
@@ -2465,7 +2586,7 @@ export default function CartScreen() {
                           {isChecked && (
                             <MaterialIcons
                               name="done"
-                              size={15}
+                              size={16}
                               color={
                                 isExpressDisabled && item.label === "Express"
                                   ? "gray"
@@ -2479,7 +2600,7 @@ export default function CartScreen() {
                       <Text
                         style={{
                           fontFamily: "nunito-light",
-                          fontSize: 16,
+                          fontSize: 17,
                           flexDirection: "row",
                           color: isExpressDisabled ? "gray" : "black",
                         }}
@@ -2512,19 +2633,23 @@ export default function CartScreen() {
                     <View
                       key={item.key}
                       style={{
-                        //backgroundColor: "red",
+                       backgroundColor: "red",
                         marginTop: 35,
                         height: 25,
                         borderRadius: 5,
                         padding: 0,
                         flexDirection: "row",
-                        width: 100,
+                        width: responsiveWidth(40),
 
                         justifyContent: "center",
-                        marginLeft: -80,
-                        marginRight: 85,
+                        marginLeft: -90,
+                        marginRight: 95,
                         // elevation: 2,
+                        // marginLeft: responsiveWidth(-19),
+                        // marginRight:responsiveWidth(20),
                         alignItems: "center",
+
+                        
                       }}
                     >
                       <TouchableOpacity
@@ -2538,8 +2663,8 @@ export default function CartScreen() {
                       >
                         <View
                           style={{
-                            width: 18,
-                            height: 18,
+                            width: 20,
+                            height: 20,
                             borderWidth: 1,
                             borderRadius: 4,
                             justifyContent: "center",
@@ -2553,7 +2678,7 @@ export default function CartScreen() {
                           {isChecked && (
                             <MaterialIcons
                               name="done"
-                              size={15}
+                              size={16}
                               color="black"
                               styles={{ alignItems: "center" }}
                             />
@@ -2563,7 +2688,7 @@ export default function CartScreen() {
                       <Text
                         style={{
                           fontFamily: "nunito-light",
-                          fontSize: 16,
+                          fontSize: 17,
                           flexDirection: "row",
                           color: isCODDisabled ? "gray" : "black",
                         }}
@@ -2635,14 +2760,19 @@ export default function CartScreen() {
             <View style={styles.viewDeliveryAddress}>
               <TouchableOpacity
                 onPress={() => {
-                  console.log("line 2638 cart screen",parseFloat(passedTotalAmount))
-                  console.log("line 2639 cart screen",FinalTotalAmount)
+                  console.log(
+                    "line 2638 cart screen",
+                    parseFloat(passedTotalAmount)
+                  );
+                  console.log("cart screen", selectedpaymenthod);
                   navigation.navigate("NewDeliveryAdd", {
                     passedStationName,
                     selectedItem,
                     extractedDatas,
-                    passedTotalAmount: parseFloat(passedTotalAmount) || FinalTotalAmount,
-
+                    passedTotalAmount:
+                      parseFloat(passedTotalAmount) || FinalTotalAmount,
+                    rewardScreenNewModeOfPayment,
+                    selectedpaymenthod,
                   });
                   // console.log("test 1009", selectedItem);
                 }}
@@ -2701,8 +2831,7 @@ export default function CartScreen() {
                   textAlign: "right",
                 }}
               >
-                Delivery Fee- ₱{" "}
-                {(deliveyfeeValue && deliveyfeeValue.toFixed(2)) || 0}
+                Delivery Fee- ₱ {(deliveyfeeValue && deliveyfeeValue) || 0}
               </Text>
             </View>
 
@@ -2766,7 +2895,10 @@ export default function CartScreen() {
                 }}
               >
                 Total Amount - ₱{" "}
-                {isNaN(FinalTotalAmount) ? "0" : FinalTotalAmount}
+                {isNaN(FinalTotalAmount)
+                  ? "0"
+                  : (parseFloat(FinalTotalAmount) || 0).toFixed(2)}
+                {/* Total Amount - ₱{isNaN(FinalTotalAmount) ? "0" : (typeof FinalTotalAmount === 'number' ? FinalTotalAmount.toFixed(2) : "0")} */}
               </Text>
             </View>
             {/* button for place oder */}
@@ -2801,7 +2933,7 @@ export default function CartScreen() {
                       paddingHorizontal: 10,
                       // backgroundColor: isDisabled ? "gray" : "#87cefa",
                       backgroundColor: "#87cefa",
-                      marginTop: 25,
+                      marginTop: 20,
                       //marginBottom: 20,
                       width: 200,
                       left: 70,
@@ -2972,7 +3104,7 @@ const styles = StyleSheet.create({
     height: 30,
     padding: 6,
     borderRadius: 8,
-    marginTop: 40,
+    marginTop: 45,
     elevation: 3,
     flexDirection: "row",
     justifyContent: "center",
@@ -2983,7 +3115,7 @@ const styles = StyleSheet.create({
     height: 30,
     padding: 6,
     borderRadius: 8,
-    marginTop: 45,
+    marginTop: 50,
     elevation: 3,
     flexDirection: "row",
   },

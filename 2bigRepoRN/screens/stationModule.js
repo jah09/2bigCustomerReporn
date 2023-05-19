@@ -5,19 +5,19 @@ import {
   FlatList,
   TouchableOpacity,
   Image,
-  StatusBar
+  StatusBar,
 } from "react-native";
 import { db } from "../firebaseConfig";
-import React, { useEffect, useState, useContext,useLayoutEffect } from "react";
+import React, { useEffect, useState, useContext, useLayoutEffect } from "react";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as geolib from "geolib";
-import { FontAwesome } from '@expo/vector-icons';
-import { query,ref,onValue } from "firebase/database";
+import { FontAwesome } from "@expo/vector-icons";
+import { query, ref, onValue } from "firebase/database";
 export default function StationModule() {
   //create a variable for
   const [adminInfo, setadminInfo] = useState({});
- //  console.log("STATION SCREEN--ADMIN INFORMATION--",adminInfo);
+  //  console.log("STATION SCREEN--ADMIN INFORMATION--",adminInfo);
 
   const locations = Object.values(adminInfo).map((admin) => ({
     idno: admin.idno,
@@ -25,16 +25,15 @@ export default function StationModule() {
     longitude: admin.RefillingStation?.addLongitude,
   }));
 
- // console.log("Locations:", locations);
+  // console.log("Locations:", locations);
 
   //get the get data of customerData from account profile
   const [customerData, setCustomerData] = useState({});
- 
+
   const [locationsDistance, setLocationDistances] = useState({});
 
   const customerLatt = customerData.lattitudeLocation;
   const customerLong = customerData.longitudeLocation;
- 
 
   //call fetchAdminData function
   //this asyncStorage is came from MAP Screen
@@ -43,7 +42,7 @@ export default function StationModule() {
       const data = await AsyncStorage.getItem("AdminData");
       if (data !== null) {
         setadminInfo(JSON.parse(data));
-       // console.log("set admin info data-->",  data);
+        // console.log("set admin info data-->",  data);
       }
     } catch (error) {
       console.log(error);
@@ -55,8 +54,8 @@ export default function StationModule() {
   const calculateDistance = () => {
     const updatedDynamicLocation = []; //create an empty array
     locations.forEach((location) => {
-      let dynamicDistance = geolib.getDistance //get the API to calculate the distance
-      (
+      let dynamicDistance = geolib.getDistance(
+        //get the API to calculate the distance
         { latitude: customerLatt, longitude: customerLong },
         { latitude: location.latitude, longitude: location.longitude }
       );
@@ -100,21 +99,21 @@ export default function StationModule() {
     const estimatedDistances = calculateDistance();
     const updatedLocationsDistance = {}; //This line initializes an empty object called updatedLocationsDistance that will be used to store the distances between the customer's location and other locations.
 
-
-    {/*This line loops through the estimatedDistances array and assigns the distance between each location and the customer's location to the corresponding key-value pair in the updatedLocationsDistance object.  */}
+    {
+      /*This line loops through the estimatedDistances array and assigns the distance between each location and the customer's location to the corresponding key-value pair in the updatedLocationsDistance object.  */
+    }
     estimatedDistances.forEach((location) => {
       updatedLocationsDistance[location.idno] = location.distance;
     });
     setLocationDistances(updatedLocationsDistance); //This line calls the setLocationDistances function to update the state of locationDistances with the updatedLocationsDistance object. This will cause React to re-render the component and display the updated locationDistances state.
   }, [customerData]);
-  
+
   const styleTypes = ["default", "dark-content", "light-content"];
   const [visibleStatusBar, setvisibleStatusbar] = useState(false);
   const [styleStatusBar, setstyleStatusBar] = useState(styleTypes[0]);
 
   const navigation = useNavigation();
-//fetch the STORE REVIEW
-
+  //fetch the STORE REVIEW
 
   return (
     <View style={styles.container}>
@@ -123,10 +122,10 @@ export default function StationModule() {
         keyExtractor={(item) => item.idno}
         renderItem={({ item }) => {
           return (
-            <View style={styles.container} key={item.idno} >
+            <View style={styles.container} key={item.idno}>
               <View style={styles.storeWrapper} key={item.idno}>
                 <TouchableOpacity
-                key={item.idno}
+                  key={item.idno}
                   activeOpacity={0.5}
                   onPress={() => {
                     // console.log(
@@ -135,9 +134,12 @@ export default function StationModule() {
 
                     navigation.navigate("toProductScreen", { item });
                   }}
-                  disabled={item.Subscribed_Package && item.Subscribed_Package.length > 0 && item.Subscribed_Package[0].packageName === "Package A" && (item.Subscribed_Package[0].orderLimit = 0, true)}
-
-
+                  disabled={
+                    item.Subscribed_Package &&
+                    item.Subscribed_Package.length > 0 &&
+                    item.Subscribed_Package[0].packageName === "Package A" &&
+                    ((item.Subscribed_Package[0].orderLimit = 0), true)
+                  }
                 >
                   <View style={styles.item} key={item.idno}>
                     <View style={styles.itemLeft}>
@@ -153,12 +155,14 @@ export default function StationModule() {
                         </Text>
 
                         <Text style={styles.storeStatusStyles}>
-                          {item.RefillingStation.businessDaysFrom}-{item.RefillingStation.businessDaysTo}
+                          {item.RefillingStation.businessDaysFrom}-
+                          {item.RefillingStation.businessDaysTo}
                         </Text>
                         <Text style={styles.storeStatusStyles}>
-                          {item.RefillingStation.operatingHrsFrom}-{item.RefillingStation.operatingHrsTo}
+                          {item.RefillingStation.operatingHrsFrom}-
+                          {item.RefillingStation.operatingHrsTo}
                         </Text>
-                       
+
                         <Text style={styles.storeStatusStyles}>
                           {/* {item.idno ? `Distance: ${locationsDistance[item.idno]} km` : null} */}
                           {/* {item.idno
@@ -168,13 +172,10 @@ export default function StationModule() {
                             ? `${locationsDistance[item.idno]} km away`
                             : "Retrieving location,please wait..."}
                         </Text>
-                       
-                     
+
                         <Text style={styles.storeStatusStyles}>
                           {item.RefillingStation.status}
                         </Text>
-                
-                       
                       </View>
                     </View>
 
@@ -252,7 +253,7 @@ const styles = StyleSheet.create({
   square: {
     width: 75,
     height: 75,
-   // backgroundColor: "red",
+    // backgroundColor: "red",
     // opacity: 0.4, #55BCF6
     borderRadius: 15,
     marginRight: 10,

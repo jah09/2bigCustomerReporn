@@ -44,7 +44,7 @@ export default function pushNotification() {
   registerForPushNotificationsAsync(customerData, expoPushToken);
 
   useEffect(() => {
-    AsyncStorage.getItem("EMPLOYEE_DATA")
+    AsyncStorage.getItem("customerData")
       .then((data) => {
         if (data !== null) {
           setCustomerData(JSON.parse(data));
@@ -111,10 +111,10 @@ async function registerForPushNotificationsAsync(customerData, expoPushToken) {
     // Update the user's token in the database
     const user = auth.currentUser;
 
-    if (user && customerData && customerData.emp_id) {
+    if (user && customerData && customerData.cusId) {
       console.log("Hey expoPushToken:", expoPushToken);
-      const customerRef = ref(db, `EMPLOYEES/${customerData.emp_id}`);
-      console.log("line 92", customerData.emp_id);
+      const customerRef = ref(db, `CUSTOMER/${customerData.cusId}`);
+      console.log("line 92", customerData.cusId);
       update(customerRef, {
         deviceToken: expoPushToken,
       })

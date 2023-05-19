@@ -10,18 +10,14 @@ import {
   Alert,
 } from "react-native";
 import React, { useEffect, useState } from "react";
-import {
-  MaterialIcons,
-  AntDesign
-} from "@expo/vector-icons";
+import { MaterialIcons, AntDesign } from "@expo/vector-icons";
 import CustomInput from "../shared/customInput";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ref, update, get, onValue } from "firebase/database";
+import { ref, update, get, onValue, set} from "firebase/database";
 import { db, auth } from "../firebaseConfig";
 import { firebase } from "../firebaseStorage";
 import * as ImagePicker from "expo-image-picker";
 export default function AccountProfileModule({ navigation }) {
-
   const onPressHandler_toMainPage = () => {
     navigation.navigate("TabNavigator");
   };
@@ -32,6 +28,7 @@ export default function AccountProfileModule({ navigation }) {
   };
 
   const [customerData, setCustomerData] = useState(null);
+  console.log("CUSTOMER ", customerData);
   const [profileImage, setProfileImage] = useState("");
   // console.log("profile screen", customerData);
 
@@ -75,23 +72,44 @@ export default function AccountProfileModule({ navigation }) {
     try {
       await AsyncStorage.multiRemove(["customerData", "email", "password"]);
       // navigate to login screen or any other screen
-
-      Alert.alert("", "Do you want to logout?", [
-        {
-          text: "Yes",
-          onPress: () => {
-            navigation.navigate("Login", { email: "", password: "" });
+      // Get the current date and time
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, "0");
+      const day = String(today.getDate()).padStart(2, "0");
+      const hours = String(today.getHours()).padStart(2, "0");
+      const minutes = String(today.getMinutes()).padStart(2, "0");
+      const seconds = String(today.getSeconds()).padStart(2, "0");
+      const formattedDate = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  
+      // Save the user log data
+      const newUserLogId = Math.floor(Math.random() * 50000) + 100000;
+      const newUserLog = newUserLogId;
+  
+      set(ref(db, `CUSTOMERSLOG/${newUserLog}`), {
+        dateLogout: formattedDate, // Set the logout date and time
+        email: customerData.email, // Set the current logged-in employee ID
+        action: "logout",
+      }).then(async () => {
+        console.log("New:", newUserLog);
+        Alert.alert("", "Do you want to logout?", [
+          {
+            text: "Yes",
+            onPress: () => {
+              navigation.navigate("Login", { email: "", password: "" });
+            },
           },
-        },
-        {
-          text: "cancel",
-        },
-      ]);
+          {
+            text: "cancel",
+          },
+        ]);
+      });
     } catch (error) {
       console.log(error);
     }
   };
-
+  
+  
   const [image, setImage] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [imageURL, setImageURL] = useState(null);
@@ -117,21 +135,21 @@ export default function AccountProfileModule({ navigation }) {
       //Alert.alert("Please select an image to upload");
       return;
     }
-  
+
     const response = await fetch(image);
     const blob = await response.blob();
-  
+
     const timestamp = new Date().getTime();
     const CustomerProfilePicture = `Cxprofile-picture-${timestamp}`;
-  
+
     // Set the path to the image, including the folder
     const path = `CustomerImages/${CustomerProfilePicture}`;
-  
+
     const ref = firebase.storage().ref().child(path);
     const snapshot = ref.put(blob);
-  
+
     setUploading(true);
-  
+
     snapshot.on(
       firebase.storage.TaskEvent.STATE_CHANGED,
       () => {},
@@ -144,10 +162,10 @@ export default function AccountProfileModule({ navigation }) {
         const downloadURL = await snapshot.snapshot.ref.getDownloadURL();
         console.log("File available at", downloadURL);
         setUploading(false);
-  
+
         // Store the download URL in AsyncStorage
         await AsyncStorage.setItem("imageURL", downloadURL);
-  
+
         // Update the customer data with the new image URL in Firebase Realtime Database
         const { cusId } = customerData;
         const customerRef = getRef(db, `CUSTOMER/${cusId}`);
@@ -168,41 +186,39 @@ export default function AccountProfileModule({ navigation }) {
       }
     );
   };
-  
-  
- // Retrieve the image URL from your Realtime Database
- const getImageURL = async () => {
-  const customerData = await AsyncStorage.getItem("customerData");
-  const cusId = JSON.parse(customerData).cusId;
 
-  const customerRef = getRef(db, `CUSTOMER/${cusId}`);
-  onValue(customerRef, (snapshot) => {
-    const data = snapshot.val();
-    if (data.imageProof) {
-      setImageURL(data.imageProof);
-    }
-  });
-};
+  // Retrieve the image URL from your Realtime Database
+  const getImageURL = async () => {
+    const customerData = await AsyncStorage.getItem("customerData");
+    const cusId = JSON.parse(customerData).cusId;
 
-useEffect(() => {
-  getImageURL();
-}, []);
-// Call getImageURL function when the user logs in or the app is resumed from the background
-useEffect(() => {
-  const unsubscribe = auth.onAuthStateChanged((user) => {
-    if (user) { 
-      getImageURL();
-    }
-  });
+    const customerRef = getRef(db, `CUSTOMER/${cusId}`);
+    onValue(customerRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data.imageProof) {
+        setImageURL(data.imageProof);
+      }
+    });
+  };
 
-  return unsubscribe;
-}, []);
-  
+  useEffect(() => {
+    getImageURL();
+  }, []);
+  // Call getImageURL function when the user logs in or the app is resumed from the background
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        getImageURL();
+      }
+    });
+
+    return unsubscribe;
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-      <View style={styles.profile}>
+        <View style={styles.profile}>
           {imageURL ? (
             <>
               <Image source={{ uri: imageURL }} style={styles.profileImage} />
@@ -228,16 +244,16 @@ useEffect(() => {
           </TouchableOpacity>
           {uploading && <Text>Uploading image...</Text>}
         </View>
-          <View style={styles.out}>
-            <TouchableOpacity onPress={handleLogout}>
-              <MaterialIcons
-                name="logout"
-                size={18}
-                color="#DFD8C8"
-              ></MaterialIcons>
-              <View></View>
-            </TouchableOpacity>
-          </View>
+        <View style={styles.out}>
+          <TouchableOpacity onPress={handleLogout}>
+            <MaterialIcons
+              name="logout"
+              size={18}
+              color="#DFD8C8"
+            ></MaterialIcons>
+            <View></View>
+          </TouchableOpacity>
+        </View>
         <View style={styles.text}>
           <Text style={{ fontWeight: "bold", left: 20, marginTop: 25 }}>
             Basic Information
@@ -295,22 +311,27 @@ useEffect(() => {
             <Text style={styles.txt}> UPDATE</Text>
           </View>
         </TouchableOpacity>
-        <View style={{backgroundColor:'transparent',height:100}}>
-          <Text style={{ fontWeight: "bold", left: 20, marginTop: 25 }}>
-            Reward Points
-          </Text>
-        </View>
+        <View style={{ backgroundColor: "transparent", height: 100 }}>
+  <Text style={{ fontWeight: "bold", left: 20, marginTop: 25 }}>
+    Reward Points
+  </Text>
+</View>
 
-        <View style={{backgroundColor:'transparent',marginTop:-50,marginBottom:30}}>
-        <CustomInput
-              
-              placeholder="Contact Number"
-              //value={customerData.phoneNumber}
-              // onChangeText={(text) =>
-              //   setCustomerData({ ...customerData, phoneNumber: text })
-              // }
-            />
-        </View>
+<View
+  style={{
+    backgroundColor: "transparent",
+    marginTop: -50,
+    marginBottom: 30,
+  }}
+>
+  <CustomInput
+    value={customerData && customerData.walletPoints.toString()}
+    editable={false}
+    onChangeText={(text) =>
+      setCustomerData({ ...customerData, walletPoints: text })
+    }
+  />
+</View>
 
       </ScrollView>
     </SafeAreaView>

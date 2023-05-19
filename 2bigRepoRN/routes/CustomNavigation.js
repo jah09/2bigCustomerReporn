@@ -8,7 +8,9 @@ import ProductScreen from "../screens/productComponent";
 import ProductScreenAndOrder from '../screens/productDetailsAndPlaceOrder';
 import TestingScreen from '../screens/NewDeliveryAddressScreen';
 import CartScreen from '../screens/CartScreen'; 
-import RewardScreen from '../screens/RewardScreen'
+import RewardScreen from '../screens/RewardScreen';
+import RatingScreen from '../screens/ReviewRatingScreen';
+
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 const Stack = createNativeStackNavigator(); // creates object for Stack Navigator
 const FirstScreenNavigator = () => {
@@ -35,6 +37,7 @@ const FirstScreenNavigator = () => {
         <Stack.Screen name="CartScreen" component={CartScreen} />
         <Stack.Screen name="NewDeliveryAdd" component={TestingScreen}/>
         <Stack.Screen name="RewardScreen" component={RewardScreen}/>
+        <Stack.Screen name="RatingScreen" component={RatingScreen}/>
       </Stack.Navigator>
     );
   };
@@ -51,8 +54,10 @@ const ThirdScreenNavigator=()=>{
         {/* <Stack.Screen name="UploadingImageTest" component={TestingScreen}/> */}
         <Stack.Screen  name="toMapsProductScreen" component={ProductScreen}/>
         <Stack.Screen name="toProductDetailsAndOrderScreen" component={ProductScreenAndOrder} />
+        <Stack.Screen name="CartScreen" component={CartScreen} />
         <Stack.Screen name="NewDeliveryAdd" component={TestingScreen}/>
         <Stack.Screen name="RewardScreen" component={RewardScreen}/>
+        <Stack.Screen name="RatingScreen" component={RatingScreen}/>
       </Stack.Navigator>
   )
   }

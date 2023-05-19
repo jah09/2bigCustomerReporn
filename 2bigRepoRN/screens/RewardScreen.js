@@ -1,4 +1,5 @@
 import {
+  Image,
   StyleSheet,
   Text,
   View,
@@ -8,6 +9,7 @@ import {
   Modal,
   TextInput,
   Alert,
+  ToastAndroid,
 } from "react-native";
 
 import React, { useEffect, useState, useLayoutEffect } from "react";
@@ -15,6 +17,7 @@ import { useRoute } from "@react-navigation/native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { AntDesign } from "@expo/vector-icons";
 import { db } from "../firebaseConfig";
+import { Feather } from "@expo/vector-icons";
 import {
   ref,
   onValue,
@@ -28,10 +31,13 @@ import {
 } from "firebase/database";
 import moment from "moment";
 import { globalStyles } from "../ForStyle/GlobalStyles";
+import * as ImagePicker from "expo-image-picker";
+import { truncate } from "lodash";
 export default function RewardScreen({ navigation }) {
   const route = useRoute();
 
   const {
+    gcashNumber,
     passedStationName,
     extractedDatas,
     rewardsData,
@@ -39,27 +45,36 @@ export default function RewardScreen({ navigation }) {
     customerData,
     FinalTotalAmount,
     selectedItem,
+    paymentMethods,
   } = route.params ?? {
     passedStationName: null,
   };
+  // console.log("Mode of payment receiving",paymentMethods)
 
+  // setreceiverModeOfPayment(updatedPaymentMethods);
+  const [receiverModeOfPayment, setreceiverModeOfPayment] = useState();
+  const [showviewmodeofpayment, setShowviewmodeofpayment] = useState(false);
+  useLayoutEffect(() => {
+    if (paymentMethods) {
+      const updatedPaymentMethods = paymentMethods.filter(
+        (method) => method.label !== "Points"
+      );
+      setreceiverModeOfPayment(updatedPaymentMethods);
+      //console.log("udpated mode of payment",updatedPaymentMethods)
+    }
+  }, [paymentMethods]);
+  // console.log("50", typeof receiverModeOfPayment, receiverModeOfPayment);
+  // console.log("51",typeof paymentMethods,paymentMethods);
   const selectedStationID = extractedDatas.adminProperties.adminID;
   const [customerRewardsPoints, setcustomerRewardsPoints] = useState(0); //object
   const [passedTotalAmount, setpassedTotalAmount] = useState(
     FinalTotalAmount || 0
   );
-  //fetch the rewards collection
-  const onPresshandler_toStationPage = () => {
-    //  console.log("send 36",secondItem, combinedData);
-    navigation.navigate("CartScreen", {
-      passedTotalAmount: passedTotalAmount.toFixed(2),
-      passedStationName,
-      secondItem,
-      extractedDatas,
-      customerData,
-      selectedItem,
-    });
-  };
+  const [actionHasBeenTaken, setActionHasBeenTaken] = useState(false); //flag to track if user click something in this codes
+  //Extract the necessary information from the selectedItem prop
+
+  // console.log("line 74",offerType, other_productSize,other_productUnit);
+
   // console.log("line 60",typeof passedTotalAmount, passedTotalAmount);
   // const customerPoints = customerData && customerData.length > 0 && customerData[0].walletPoints;
   // console.log("line 62", selectedItem);
@@ -90,6 +105,39 @@ export default function RewardScreen({ navigation }) {
     functionsetCurrentDate();
   }, []);
   //Get the promo_offered collection in database
+  // useLayoutEffect(() => {
+  //   const promoOfferedRef = ref(db, "PROMO_OFFERED/");
+  //   const promoOfferedQuery = query(
+  //     promoOfferedRef,
+  //     orderByChild("adminId"),
+  //     equalTo(selectedStationID)
+  //   );
+  //   onValue(promoOfferedQuery, (snapshot) => {
+  //     const data = snapshot.val();
+  //     if (data) {
+  //       const promoOfferedInfo = Object.keys(data).map((key) => ({
+  //         id: key,
+  //        // isExpired: moment(data[key].promoExpirationTo, "yyyy-MM-dd") < moment(),
+  //         ...data[key],
+  //       }));
+  //       promoOfferedInfo.forEach((promo) => {
+  //         promo.promoExpirationTo = moment(
+  //           new Date(promo.promoExpirationTo),
+  //           "yyyy-MM-dd"
+  //         ).format("MM-DD-yyyy");
+          
+  //       });
+
+    
+  //       setpromoOffered(promoOfferedInfo);
+  //      // console.log("Reward SCREEN---tst", promoOfferedInfo);
+  //       const couponAdminID =
+  //         promoOfferedInfo && Object.values(promoOfferedInfo)[0].adminId;
+  //       //console.log("Admin ID",couponAdminID);
+  //       setcouponAdminID(couponAdminID);
+  //     }
+  //   });
+  // }, [selectedStationID]);
   useLayoutEffect(() => {
     const promoOfferedRef = ref(db, "PROMO_OFFERED/");
     const promoOfferedQuery = query(
@@ -102,65 +150,64 @@ export default function RewardScreen({ navigation }) {
       if (data) {
         const promoOfferedInfo = Object.keys(data).map((key) => ({
           id: key,
-
           ...data[key],
         }));
-        promoOfferedInfo.forEach((promo) => {
-          promo.promoExpirationTo = moment(
-            new Date(promo.promoExpirationTo),
-            "yyyy-MM-dd"
-          ).format("MM-DD-yyyy");
+  
+        // check and set expired coupons
+        const currentDate = moment();
+        const promoOfferedWithExpiration = promoOfferedInfo.map((promo) => {
+          const expirationDate = moment(promo.promoExpirationTo, "yyyy-MM-DDTHH:mm:ssZ");
+          const isExpired = expirationDate < currentDate;
+          const disabled = isExpired || expirationDate.isSame(currentDate, 'day');
+          return {
+            ...promo,
+            isExpired,
+            disabled,
+            promoExpirationTo: expirationDate.format("MM-DD-yyyy"),
+          };
         });
-
-        {
-          /*
-       rewardsInfo.forEach((reward) => {
-        reward.promoExpirationTo = moment(
-          new Date(reward.promoExpirationTo),
-          "yyyy-MM-dd"
-        ).format("MM-DD-yyyy");
-      });
-     */
-        }
-        // console.log("line 43", rewardsInfo);
-        setpromoOffered(promoOfferedInfo);
-        // console.log("PRODUCT SCREEN---tst", promoOfferedInfo);
+       // console.log("line 163", promoOfferedWithExpiration);
+        setpromoOffered(promoOfferedWithExpiration);
         const couponAdminID =
-          promoOfferedInfo && Object.values(promoOfferedInfo)[0].adminId;
-        //console.log("Admin ID",couponAdminID);
+          promoOfferedWithExpiration && promoOfferedWithExpiration[0]?.adminId;
         setcouponAdminID(couponAdminID);
       }
     });
   }, [selectedStationID]);
+  
+  
   const [promoOffered, setpromoOffered] = useState();
   const [couponAdminID, setcouponAdminID] = useState();
   const [currentDate, setCurrentDate] = useState("");
+
   //textinput of the manual option
   const [showManualTextInput, setshowManualTextInput] = useState(false);
   const [manualTextinputValue, setmanualTextinputValue] = useState("");
 
   const [autoUsePoints, setAutoUsePoints] = useState(false);
+
+  //auto use of the points
   const handleAutoUse = () => {
-    if (selectedStationID != couponAdminID) {
-      Alert.alert(
-        "Warning",
-        "You can't use your point earned from another station."
-      );
-    } else {
+    // if (selectedStationID != couponAdminID) {
+    //   Alert.alert(
+    //     "Warning",
+    //     "You can't use your point earned from another station."
+    //   );
+    // } else 
       if (parseFloat(passedTotalAmount) < parseFloat(customerRewardsPoints)) {
         //console.log("98",  parseFloat(FinalTotalAmount) );
         // console.log("99",parseFloat(customerRewardsPoints))
         const deductedAmount =
-          parseFloat(customerRewardsPoints) - parseFloat(FinalTotalAmount);
-
+             parseFloat(customerRewardsPoints) - parseFloat(FinalTotalAmount);
+          console.log("168", parseFloat(deductedAmount));
         //update the database
         const customerPointsRef = ref(db, `CUSTOMER/${customerID}`); //get the db reference
         // Use the `get` method to retrieve the current walletPoints value
         get(customerPointsRef).then((snapshot) => {
           const walletPoints = snapshot.val().walletPoints || 0;
-          const updatedPoints = deductedAmount; // convert deductedAmount to an integer
+          const updatedPoints = deductedAmount.toFixed(2); // convert deductedAmount to an integer
           //setorderPoints(updatedPoints);
-          update(customerPointsRef, { walletPoints: updatedPoints })
+          update(customerPointsRef, { walletPoints: parseFloat(updatedPoints) })
             .then(() => {
               console.log("--->Customer points updated successfully!");
             })
@@ -177,13 +224,15 @@ export default function RewardScreen({ navigation }) {
         set(ref(db, `CUSTOMERSLOG/${newUserlogKey}`), {
           //orderID: newOrderKey,
           cusId: customerID,
-          orderDate: currentDate,
+          datepointsDeducted: currentDate,
           logsPerformed: actionTaken,
           pointsDeductted: FinalTotalAmount,
           btnClick: btnClick,
         })
           .then(async () => {
             // console.log('Test if Save to db-----'+reservationDate );
+            ToastAndroid.show("Points successfully used.", ToastAndroid.LONG);
+            setActionHasBeenTaken(false);
             setpassedTotalAmount(0);
             console.log(
               "Reward screen --->New UserLog with the User ID of--->",
@@ -195,18 +244,30 @@ export default function RewardScreen({ navigation }) {
             alert("Error", JSON.stringify(error), "OK");
           });
       } else {
+        //if passed total amount is greater than customer points
         setAutoUsePoints(true);
         const deductedAmount =
           parseFloat(passedTotalAmount) - customerRewardsPoints;
+          console.log("Deducted Amount is ",deductedAmount);
         //const roundedPoints = (0).toFixed(2); // round to 2 decimal places
         //setcustomerRewardsPoints(roundedPoints);
-        setpassedTotalAmount(deductedAmount);
+        ToastAndroid.show("Points successfully used.", ToastAndroid.LONG);
+        setpassedTotalAmount(deductedAmount.toFixed(2));
 
         Alert.alert(
           "Warning",
           `You have balance of ₱${deductedAmount.toFixed(
             2
-          )}.  Please choose an alternative mode of payment on the cart screen.`
+          )}.  Please choose an alternative mode of payment below.`,
+          [
+            {
+              text: "Okay",
+              onPress: () => {
+                setShowviewmodeofpayment(true);
+                setActionHasBeenTaken(true);
+              },
+            },
+          ]
         );
         //update the database
         const customerPointsRef = ref(db, `CUSTOMER/${customerID}`); //get the db reference
@@ -249,23 +310,29 @@ export default function RewardScreen({ navigation }) {
             alert("Error", JSON.stringify(error), "OK");
           });
       }
-    }
+    
   };
   const [useAllIsDisable, setUseAllIsDisable] = useState(false);
   const [deductedPoints, setDeductedPoints] = useState(0);
+
   //function to deduct manually
   const manualPointsDeduct = () => {
-    if (selectedStationID != couponAdminID) {
-      Alert.alert(
-        "Warning",
-        "You can't use your point earned from another station."
-      );
-    } else {
+    // if (selectedStationID != couponAdminID) {
+    //   Alert.alert(
+    //     "Warning",
+    //     "You can't use your point earned from another station."
+    //   );
+    // } else {
+      if (parseFloat(manualTextinputValue) <= 0) {
+        Alert.alert("Warning", `Input value must be greater than zero.`);
+      }
+
       //if ang ge enter na value is greater than sa customer pts
-      if (
+      else if (
         parseFloat(manualTextinputValue) > parseFloat(customerRewardsPoints)
       ) {
         Alert.alert("Warning", `Insufficient points balance.`);
+        setActionHasBeenTaken(true);
       } else {
         console.log("Input value for manual is ", manualTextinputValue);
         console.log("Final total is", FinalTotalAmount);
@@ -275,20 +342,22 @@ export default function RewardScreen({ navigation }) {
         //parseFloat(FinalTotalAmount) + parseFloat(manualTextinputValue);
 
         console.log("manual. remaining balance is ", deductedAmount);
-
+        ToastAndroid.show("Points successfully used.", ToastAndroid.LONG);
         setpassedTotalAmount(deductedAmount);
 
         Alert.alert(
           "Warning",
           `You have balance of ₱${deductedAmount.toFixed(
             2
-          )}.  Please choose an alternative mode of payment on the cart screen.`,
+          )}.  Please choose an alternative mode of payment below.`,
           [
             {
               text: "Okay",
               onPress: () => {
                 setUseAllIsDisable(false);
                 setmanualTextinputValue("");
+                setShowviewmodeofpayment(true);
+                setActionHasBeenTaken(true);
               },
             },
           ]
@@ -316,7 +385,7 @@ export default function RewardScreen({ navigation }) {
         set(ref(db, `CUSTOMERSLOG/${newUserlogKey}`), {
           //orderID: newOrderKey,
           cusId: customerID,
-          orderDate: currentDate,
+          datepointsDeducted: currentDate,
           logsPerformed: actionTaken,
           pointsDeductted: manualTextinputValue,
           btnClick: btnClick,
@@ -336,7 +405,7 @@ export default function RewardScreen({ navigation }) {
         setUseAllIsDisable(false);
         setmanualTextinputValue("");
       }
-    }
+    
   };
 
   //get the customer collection
@@ -371,98 +440,265 @@ export default function RewardScreen({ navigation }) {
 
   const [newcustomerData, setnewcustomerData] = useState();
 
-  const [couponUsedDisable, setcouponUsedDisable] = useState(true);
-  //function to use the coupon then subtract to the final total amount
+  const [couponUsedDisable, setcouponUsedDisable] = useState(false);
+  //console.log(" 375", couponUsedDisable);
+  //function to use the coupon then subtract to the final total
+
+  const [CustomerLogsCounts, setCustomerLogsCounts] = useState();
+  // setCouponId(couponID);
+  const [passedCouponId, setCouponId] = useState();
+
   const couponUseFunction = (item) => {
-    {/* Test only here if ma upload ba sa git */}
+    //extract the selectedItem properties
+
+    const [{ offerType, other_productSize, other_productUnit }] = selectedItem;
+    const {
+      promoAppliedToProductOffers,
+      promoAppliedTo_otherProductUnitSizes,
+      promoAppliedTo_productRefillUnitSizes,
+      promoName,
+      promoDiscountValue,
+    } = item;
+
+    const productOffers = promoAppliedToProductOffers
+      .split(",")
+      .map((s) => s.trim());
+    const otherProductUnitSizes = promoAppliedTo_otherProductUnitSizes
+      .split(",")
+      .map((s) => s.trim());
+    const productRefillUnitSizes = promoAppliedTo_productRefillUnitSizes
+      .split(",")
+      .map((s) => s.trim());
+
     const couponID = item.promoId; //ID of the coupon
+    setCouponId(couponID);
     const couponUsed = "alreadyUsed"; //track if the coupon is used or not
     const customerPointsRef = ref(db, `CUSTOMER/${customerID}`); //get the db reference
     const discountCouponValue = promoOffered[0].promoDiscountValue;
     const pointsToRequired = promoOffered[0].promoPointsRequiredToClaim;
-    console.log("selected ID", selectedStationID);
-    console.log("couponAdminID ID", couponAdminID);
-    if (selectedStationID != couponAdminID) {
-      Alert.alert("Warning", "This station is not offering a reward system.");
-    } else {
-      //check if the coupon is used or not
-      //retrieve customer logs
 
-      // check if coupon is already used
-      // Retrieve customer logs for the specific coupon ID
-      console.log("couponId", couponID);
-      const customerLogRef = ref(db, "CUSTOMERSLOGTEST/");
-      //  console.log("inside this effect",customerID)
-      const customerQuery = query(
-        customerLogRef,
-        orderByChild("couponId"),
-        equalTo(couponID)
-      );
+    console.log("line 430", productOffers);
+    //     if(productOffers[0] || productOffers[1]!==offerType || otherProductUnitSizes[0]||otherProductUnitSizes[0]!==other_productSize&& other_productUnit ){
+    // Alert.alert()
+    //     }
 
-      get(customerQuery).then((snapshot) => {
-        const logs = snapshot.val() || {};
-        const logsCount = Object.keys(logs).length;
-        // If no logs found, proceed to use the coupon
-        console.log("Logs test", logs);
+    // check if coupon is already used
+    // Retrieve customer logs for the specific coupon ID
+    // console.log("couponId", couponID);
+    const customerLogRef = ref(db, "CUSTOMERSLOG/");
+    //  console.log("inside this effect",customerID)
+    const customerQuery = query(
+      customerLogRef,
+      orderByChild("couponId"),
+      equalTo(couponID)
+    );
 
-        if (
-          logsCount > 0 &&
-          Object.values(logs)[0].useCoupon === couponUsed &&
-          Object.values(logs)[0].couponId === couponID
-        ) {
-          Alert.alert("Warning", "You have already used this coupon.");
-         // setcouponUsedDisable(true);
-        } else {
-          const remainingCustomerPoints =
-            parseFloat(customerRewardsPoints) - parseFloat(pointsToRequired);
-          console.log("Remain points", remainingCustomerPoints);
-          const deductionAmount =
-            (passedTotalAmount * discountCouponValue) / 100; // subtracted amount
-          const newTotalAmount = passedTotalAmount - deductionAmount; // new total amount
-          console.log("Deducted amount:", deductionAmount);
-          console.log("New total amount:", newTotalAmount);
-          setpassedTotalAmount(newTotalAmount);
-          get(customerPointsRef).then((snapshot) => {
-            const walletPoints = snapshot.val().walletPoints || 0;
-            const updatedPoints = parseFloat(remainingCustomerPoints); // convert deductedAmount to an integer
-            //setorderPoints(updatedPoints);
-            update(customerPointsRef, { walletPoints: updatedPoints })
-              .then(() => {
-                console.log("--->Customer points updated successfully!");
-              })
-              .catch((error) => {
-                console.error("Error updating customer points: ", error);
-              });
-          });
-          //save to customer user logs
-          const couponItem = "useCoupon";
-          const actionTaken = "pointsDeducted";
-          const userLogRandomId = Math.floor(Math.random() * 50000) + 10000;
-          const newUserlogKey = userLogRandomId;
-          set(ref(db, `CUSTOMERSLOGTEST/${newUserlogKey}`), {
-            //orderID: newOrderKey,
-            cusId: customerID,
-            orderDate: currentDate,
-            logsPerformed: actionTaken,
-            pointsDeductted: pointsToRequired,
-            couponItemClick: couponItem,
-            couponId: couponID,
-            useCoupon: couponUsed,
-          })
-            .then(async () => {
-              // console.log('Test if Save to db-----'+reservationDate );
-              console.log(
-                "Reward screen --->New UserLog with the User ID of--->",
-                newUserlogKey
-              );
+    get(customerQuery).then((snapshot) => {
+      const logs = snapshot.val() || {};
+      const logsCount = Object.keys(logs).length;
+      setCustomerLogsCounts(logs);
+      // If no logs found, proceed to use the coupon
+      console.log("Logs test", logs);
+
+      if (
+        logsCount > 0 &&
+        Object.values(logs)[0].useCoupon === couponUsed &&
+        Object.values(logs)[0].couponId === couponID
+      ) {
+        setcouponUsedDisable(true);
+        console.log("You have already used this coupon");
+        Alert.alert("Warning", "You have already used this coupon.");
+      } else {
+        const remainingCustomerPoints =
+          parseFloat(customerRewardsPoints) - parseFloat(pointsToRequired);
+        console.log("Remain points", remainingCustomerPoints);
+        const deductionAmount = (passedTotalAmount * discountCouponValue) / 100; // subtracted amount
+        const newTotalAmount = passedTotalAmount - deductionAmount; // new total amount
+        console.log("Deducted amount:", deductionAmount);
+        console.log("New total amount:", newTotalAmount);
+
+        ToastAndroid.show(
+          "You successfully used this coupon.",
+          ToastAndroid.LONG
+        );
+        setpassedTotalAmount(newTotalAmount.toFixed(2));
+        Alert.alert(
+          "Warning",
+          `You have balance of ₱${newTotalAmount.toFixed(
+            2
+          )}.  Please choose an alternative mode of payment on the cart screen.`,
+          [
+            {
+              text: "Okay",
+              onPress: () => {
+                setcouponUsedDisable(true);
+                setShowviewmodeofpayment(true);
+                setActionHasBeenTaken(true);
+              },
+            },
+          ]
+        );
+        //u
+        get(customerPointsRef).then((snapshot) => {
+          const walletPoints = snapshot.val().walletPoints || 0;
+          const updatedPoints = parseFloat(remainingCustomerPoints); // convert deductedAmount to an integer
+          //setorderPoints(updatedPoints);
+          update(customerPointsRef, { walletPoints: updatedPoints })
+            .then(() => {
+              console.log("--->Customer points updated successfully!");
             })
             .catch((error) => {
-              console.log("Error Saving to Database", error);
-              alert("Error", JSON.stringify(error), "OK");
+              console.error("Error updating customer points: ", error);
             });
+        });
+        //save to customer user logs
+        const couponItem = "useCoupon";
+        const actionTaken = "pointsDeducted";
+        const userLogRandomId = Math.floor(Math.random() * 50000) + 10000;
+        const newUserlogKey = userLogRandomId;
+        set(ref(db, `CUSTOMERSLOG/${newUserlogKey}`), {
+          //orderID: newOrderKey,
+          cusId: customerID,
+          couponusedDate: currentDate,
+          logsPerformed: actionTaken,
+          pointsDeducted: pointsToRequired,
+          couponItemClick: couponItem,
+          couponId: couponID,
+          useCoupon: couponUsed,
+        })
+          .then(async () => {
+            // console.log('Test if Save to db-----'+reservationDate );
+            console.log(
+              "Reward screen --->New UserLog with the User ID of--->",
+              newUserlogKey
+            );
+          })
+          .catch((error) => {
+            console.log("Error Saving to Database", error);
+            alert("Error", JSON.stringify(error), "OK");
+          });
+      }
+    });
+  };
+
+  //track every mount that the coupon item is already use or not
+  useEffect(() => {
+    if (customerID) {
+      const customerLogRef = ref(db, "CUSTOMERSLOG/");
+      const customerQuery = query(
+        customerLogRef,
+        orderByChild("cusId"),
+        equalTo(customerID)
+      );
+      onValue(customerQuery, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          const newCustomerInfo = Object.keys(data).map((key) => ({
+            id: key,
+
+            ...data[key],
+          }));
+          //console.log("line 553",newCustomerInfo);
+          // Loop through the newCustomerInfo array and check if any items have useCoupon: alreadyUsed and couponId: 3635
+
+          const useCouponData = newCustomerInfo.find(
+            (item) => item.useCoupon === "alreadyUsed"
+          );
+          if (useCouponData) {
+            setcouponUsedDisable(true);
+          }
+          // console.log("line 563",useCouponData);
+          // const customer = newCustomerInfo[0];
+          // const walletPoints = customer.walletPoints;
+          // Update the state with the new wallet points
+          // setcustomerRewardsPoints(walletPoints);
+
+          // setnewcustomerData(newCustomerInfo);
         }
       });
     }
+  }, [customerID]);
+
+  //code for the handle checkbox of new mode of payment
+
+  const [selectedpaymenthod, setselectedPaymentMethod] = useState();
+  // console.log("line 526",selectedpaymenthod);
+  const [checkedItemKey_paymentMethod, setCheckedItemKey_paymentMethod] =
+    useState(null);
+  const handleItemchecked_paymentMethod = (item) => {
+    setCheckedItemKey_paymentMethod(
+      item.key === checkedItemKey_paymentMethod ? null : item.key
+    );
+    if (item.value === "CashOnDelivery") {
+      console.log("COD");
+      // if (selectedOrdertype === "PickUp") {
+      //   Alert.alert("To our beloved customer", "COD is only for delivery.");
+      // }
+    } else {
+      console.log("GCASH");
+      // setShowModal_ModeOfPayment(true);
+    }
+  };
+
+  //when press back to the previous screen
+  const onPresshandler_toStationPage = () => {
+    if (!actionHasBeenTaken) {
+      navigation.navigate("CartScreen", {
+        passedTotalAmount: passedTotalAmount,
+        passedStationName,
+        secondItem,
+        extractedDatas,
+        customerData,
+        selectedItem,
+        rewardScreenNewModeOfPayment: selectedpaymenthod || null,
+      });
+    } else if (checkedItemKey_paymentMethod === null) {
+      Alert.alert(
+        "Warning",
+        `You have a balanced of ₱${passedTotalAmount}. Please choose an alternative mode of payment below.`,
+        [
+          {
+            text: "Okay",
+            onPress: () => {
+              setShowviewmodeofpayment(true);
+            },
+          },
+        ]
+      );
+    } else {
+      navigation.navigate("CartScreen", {
+        passedTotalAmount: passedTotalAmount.toFixed(2),
+        passedStationName,
+        secondItem,
+        extractedDatas,
+        customerData,
+        selectedItem,
+        rewardScreenNewModeOfPayment: selectedpaymenthod || null,
+      });
+    }
+    // if (checkedItemKey_paymentMethod === null) {
+    //   console.log("line 75 selectedpaymenthod is null");
+    //   Alert.alert(
+    //     "Warning",
+    //     `You have a balanced of ₱${passedTotalAmount}. Please choose an alternative mode of payment below.`,[{
+    //       text:"Okay",
+    //       onPress:()=>{
+    //         setShowviewmodeofpayment(true);
+    //       }
+    //     }]
+    //   );
+    // } else {
+    //   navigation.navigate("CartScreen", {
+    //     passedTotalAmount: passedTotalAmount,
+    //     passedStationName,
+    //     secondItem,
+    //     extractedDatas,
+    //     customerData,
+    //     selectedItem,
+    //     rewardScreenNewModeOfPayment: selectedpaymenthod || null,
+    //   });
+    // }
+    //  console.log("send 36",secondItem, combinedData);
   };
   return (
     <ScrollView style={{ backgroundColor: "lightcyan" }}>
@@ -610,7 +846,7 @@ export default function RewardScreen({ navigation }) {
 
             <View style={styles.viewPoints}>
               <Text style={{ fontSize: 33, textAlign: "center", top: 10 }}>
-                {customerRewardsPoints}
+                {customerRewardsPoints|| 0}
               </Text>
             </View>
           </View>
@@ -626,8 +862,98 @@ export default function RewardScreen({ navigation }) {
               Total Amount - ₱{parseFloat(passedTotalAmount).toFixed(2) || 0}
             </Text>
           </View>
+
+          {/* code for new mode of payment */}
+          {showviewmodeofpayment && (
+            <View style={styles.viewForModeofPayment}>
+              <Text
+                style={{
+                  fontSize: 17,
+                  fontFamily: "nunito-semibold",
+                  marginLeft: 5,
+                }}
+              >
+                Mode of payment
+              </Text>
+              {receiverModeOfPayment &&
+                receiverModeOfPayment.map((item) => {
+                  const isChecked = item.key === checkedItemKey_paymentMethod;
+                  // const isCODDisabled =
+                  // selectedOrdertype === "PickUp" &&
+                  // item.label === "CashOnDelivery";
+                  return (
+                    <View
+                      key={item.key}
+                      style={{
+                        // backgroundColor: "red",
+                        marginTop: 35,
+                        height: 25,
+                        borderRadius: 5,
+                        padding: 0,
+                        flexDirection: "row",
+                        width: 110,
+
+                        justifyContent: "center",
+                        marginLeft: -95,
+                        marginRight: 110,
+                        // elevation: 2,
+                        alignItems: "center",
+                      }}
+                    >
+                      <TouchableOpacity
+                        onPress={() => {
+                          handleItemchecked_paymentMethod(item);
+                          setselectedPaymentMethod(item.value);
+                          setCheckedItemKey_paymentMethod(item.key);
+                          console.log("payment clicked Value -->", item.value);
+                        }}
+                        //  disabled={isCODDisabled}
+                      >
+                        <View
+                          style={{
+                            width: 20,
+                            height: 20,
+                            borderWidth: 1,
+                            borderRadius: 4,
+                            justifyContent: "center",
+                            alignItems: "center",
+                            marginLeft: 10,
+                            marginRight: 5,
+                            //backgroundColor:'blue'
+                            // borderColor: isCODDisabled ? "gray" : "black",
+                            borderColor: "black",
+                          }}
+                        >
+                          {isChecked && (
+                            <MaterialIcons
+                              name="done"
+                              size={16}
+                              color="black"
+                              styles={{ alignItems: "center" }}
+                            />
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                      <Text
+                        style={{
+                          fontFamily: "nunito-light",
+                          fontSize: 17,
+                          flexDirection: "row",
+                          // color: isCODDisabled ? "gray" : "black",
+                          color: "black",
+                        }}
+                      >
+                        {item.label}
+                      </Text>
+                    </View>
+                  );
+                })}
+            </View>
+          )}
+
+          {/* code for coupon/s */}
           <View
-            style={{ backgroundColor: "transparent", top: 30, height: 250 }}
+            style={{ backgroundColor: "transparent", top: 50, height: 250 }}
           >
             <Text style={styles.waterProdStyle}>Available coupons</Text>
             {/* <ScrollView style={{backgroundColor:'red'}} contentContainerStyle={}> */}
@@ -641,12 +967,18 @@ export default function RewardScreen({ navigation }) {
                       console.log("Press");
                       couponUseFunction(item);
                     }}
-                    disabled={
-                      item.promoPointsRequiredToClaim <=
-                        customerRewardsPoints 
-                        ? false
-                        : true
+                    // disabled={ couponUsedDisable ||
+                    //   item.promoPointsRequiredToClaim <=
+                    //     customerRewardsPoints
+                    //     ? false
+                    //     : true
+                    // }
+                    disabled={ item.disabled || 
+                      passedTotalAmount == 0 ||
+                      couponUsedDisable ||
+                      item.promoPointsRequiredToClaim > customerRewardsPoints
                     }
+                    
                   >
                     <View style={styles.productWrapper} key={item.id}>
                       {/* <View
@@ -662,15 +994,28 @@ export default function RewardScreen({ navigation }) {
                           },
                         ]}
                       > */}
-                        <View
+                      <View
                         style={[
                           styles.viewWaterItem,
+                          // {
+                          //   backgroundColor:
+                          //   passedTotalAmount===0 ||
+                          //     item.promoPointsRequiredToClaim <=
+                          //     customerRewardsPoints
+                          //       ? "#B0DAFF"
+                          //       : "white",
+                          // },
                           {
-                            backgroundColor:
-                              item.promoPointsRequiredToClaim <=
-                              customerRewardsPoints ||couponUsedDisable
+                            backgroundColor:item.disabled ? "whitesmoke":
+                              passedTotalAmount === 0
+                                ? "whitesmoke"
+                                : item.promoPointsRequiredToClaim <=
+                                  customerRewardsPoints
                                 ? "#B0DAFF"
-                                : "white",
+                                : "whitesmoke",
+                          },
+                          couponUsedDisable && {
+                            backgroundColor: "whitesmoke",
                           },
                         ]}
                       >
@@ -693,7 +1038,7 @@ export default function RewardScreen({ navigation }) {
                             fontSize: 15,
                           }}
                         >
-                          Valid until {item.promoExpirationTo}
+                         {item.isExpired ? "Expired" : `Valid until ${item.promoExpirationTo}`}
                         </Text>
 
                         <Text
@@ -717,6 +1062,51 @@ export default function RewardScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  imagePickerInput: {
+    flexDirection: "row",
+    // borderBottomColor: "gray",
+    //borderBottomWidth: 0.5,
+    paddingBottom: 2,
+    marginBottom: 5,
+    width: 270,
+    marginTop: 5,
+    marginLeft: 5,
+  },
+  ModinputWrapper: {
+    // backgroundColor: "green",
+    paddingVertical: 5,
+    marginTop: 5,
+    height: 120,
+    padding: 6,
+  },
+  modeofPaymentModal: {
+    width: 310,
+    height: 350,
+    backgroundColor: "white",
+    borderBottomColor: "gray",
+    borderBottomWidth: 1,
+    borderRadius: 3,
+    elevation: 10,
+    marginBottom: 50,
+  },
+
+  modeofPaymentModalTitle: {
+    justifyContent: "flex-start",
+    padding: 0,
+    flexDirection: "row",
+    marginLeft: 5,
+    padding: 4,
+  },
+  viewForModeofPayment: {
+    backgroundColor: "white",
+    width: 140,
+    height: 30,
+    padding: 6,
+    borderRadius: 8,
+    marginTop: 30,
+    elevation: 3,
+    flexDirection: "row",
+  },
   modalTitle: {
     justifyContent: "flex-start",
     padding: 0,
@@ -760,7 +1150,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 5,
-    elevation: 4,
+    elevation: 6,
     top: 10,
     height: 80,
     //justifyContent:'center'
@@ -836,7 +1226,7 @@ const styles = StyleSheet.create({
       height: 5,
       width: 5,
     },
-    elevation: 7,
+    elevation: 5,
 
     //top: 10,
   },
