@@ -34,13 +34,12 @@ import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import Feather from "react-native-vector-icons/Feather";
 import { Entypo } from "@expo/vector-icons";
 import { AntDesign } from "@expo/vector-icons";
-//import ImagePicker from 'react-native-image-picker';
 import * as ImagePicker from "expo-image-picker";
 import * as Permissions from "expo-permissions";
 import { GOOGLE_API_KEY_GEOLOCATION } from "../APIKEY";
 import { firebase } from "../firebaseStorage";
 import { db } from "../firebaseConfig";
-import { add } from "lodash";
+import { SHA256 } from 'crypto-js';
 
 export default function CreateAccountPage({ navigation }) {
   useEffect(() => {
@@ -104,6 +103,7 @@ export default function CreateAccountPage({ navigation }) {
   const [visibleConfirmPass, setvisibleConfirmPass] = useState(true);
   const [showModal_ModeOfPayment, setShowModal_ModeOfPayment] = useState(false);
   const [showModal_Selfie, setShowModal_Selfie] = useState(false);
+
   {
     /*style para dili mo overlapp ang logo sa status bar */
   }
@@ -170,20 +170,20 @@ export default function CreateAccountPage({ navigation }) {
         // );
         Geocoder.from(location.coords.latitude, location.coords.longitude)
           .then((json) => {
-              let address = json.results[5].formatted_address;
-              let types = json.results[3].address_components;
-             // console.log("address",address);
-             // console.log("types",types);
-              let streetNameComponent = types.find((component) =>
+            let address = json.results[5].formatted_address;
+            let types = json.results[3].address_components;
+            // console.log("address",address);
+            // console.log("types",types);
+            let streetNameComponent = types.find((component) =>
               component.types.includes("route")
             );
             let streetName = streetNameComponent.short_name;
-            
+
             // Modify the address string to include the street name
             address = address.replace("Cebu City", streetName + ", Cebu City");
-            
-           // console.log("Modified address:", address);
-           setAddress(address);
+
+            // console.log("Modified address:", address);
+            setAddress(address);
             // let barangay = "";
             // for (
             //   let i = 0;
@@ -277,33 +277,6 @@ export default function CreateAccountPage({ navigation }) {
 
     functionsetCurrentDate();
   }, []);
-  // const formatDate = (date) => {
-  //   const year = date.getFullYear();
-  //   const month = String(date.getMonth() + 1).padStart(2, "0");
-  //   const day = String(date.getDate()).padStart(2, "0");
-  //   return `${year}-${month}-${day}`;
-  // };
-  //   const onCharge = (event, selectedDate) => {
-  //     const currentDate = selectedDate || date;
-  //   setShow(Platform.OS === "ios");
-  //   setDate(currentDate);
-
-  //   // Check if selected date is less than 17 years ago
-  //   const minDate = new Date(Date.now() - 17 * 365 * 24 * 60 * 60 * 1000);
-  //   const maxDate = new Date(Date.now() - 100 * 365 * 24 * 60 * 60 * 1000);
-  //   if (currentDate < minDate) {
-  //     alert("You must be at least 17 years old to use this app.");
-  //     return;
-  //   } else if (currentDate > maxDate) {
-  //     alert("You must be at most 100 years old to use this app.");
-  //     return;
-  //   }
-
-  //   // Format the selected date as a string
-  //   const formattedDate = formatDate(currentDate);
-  //   setBOD(formattedDate);
-  // };
-  //firebase data for creating account
 
   const [firstName, setFName] = useState("");
   const [middleName, setMName] = useState("");
@@ -316,6 +289,20 @@ export default function CreateAccountPage({ navigation }) {
   const [conPass, setConPass] = useState("");
   const [lattitude_Location, setLatittudeLoc] = useState();
   const [longitude_Location, setLongitudeLoc] = useState();
+
+  const sanitizeInput = (text) => {
+    // Remove HTML tags using regex
+    const sanitizedText = text.replace(/<[^>]+>/g, "");
+    // Remove numbers and special characters using regex
+    const sanitizedTextWithoutNumbers = sanitizedText.replace(/[^a-zA-Z ]/g, "");
+    return sanitizedTextWithoutNumbers;
+  };
+  const handlePhoneChange = (text) => {
+    // Remove non-digit characters
+    const sanitizedText = text.replace(/[^0-9]/g, '');
+    setPhone(sanitizedText);
+  };
+
 
   const handleCreate = () => {
     try {
@@ -341,12 +328,15 @@ export default function CreateAccountPage({ navigation }) {
         alert("Passwords do not match");
         return;
       }
+      // Encrypt the password and confirm password
+    const encryptedPassword = SHA256(password).toString();
+    const encryptedConfirmPass = SHA256(conPass).toString();
 
-      // Check password strength
-      const checkPassword = checkPasswordValidity(password);
-      if (!checkPassword) {
-        createUserAccount();
-        // calls the create function to proceed with the creation of account
+     // Check password strength
+    const checkPassword = checkPasswordValidity(password);
+    if (!checkPassword) {
+      // Proceed with the creation of the account using the encrypted passwords
+      createUserAccount(encryptedPassword, encryptedConfirmPass);
         alert("Account created successfully");
       } else {
         alert("Weak password. Please enter a stronger password for security.");
@@ -357,33 +347,31 @@ export default function CreateAccountPage({ navigation }) {
     }
   };
 
-  async function createUserAccount() {
+  async function createUserAccount(encryptedPassword, encryptedConfirmPass) {
     const auth = getAuth();
     try {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
-        password
+        encryptedPassword
       );
       const user = userCredential.user;
       const db = getDatabase();
-
       // Generate new unique customer ID
       const cusId = Math.floor(Math.random() * 900000) + 100000;
       const status = "Pending";
-
       // Add customer details to database
       await set(ref(db, "CUSTOMER/" + cusId), {
         cusId: cusId,
-        firstname: firstName,
+        firstName: firstName,
         middleName: middleName,
         lastName: lastName,
         phoneNumber: phone,
         birthdate: BOD,
         address: address,
         email: email,
-        password: password,
-        confirmPassword: conPass,
+        password: encryptedPassword,
+        confirmPassword: encryptedConfirmPass,
         imageProof: gcashProoflink_Storage,
         imageSelfie: selfieImagelink,
         cus_status: status,
@@ -736,8 +724,9 @@ export default function CreateAccountPage({ navigation }) {
 
                 <TextInput
                   value={firstName}
-                  onChangeText={(firstName) => {
-                    setFName(firstName);
+                  onChangeText={(text) => {
+                    const sanitizedText = sanitizeInput(text);
+                    setFName(sanitizedText);
                   }}
                   placeholder="First Name"
                   placeholderTextColor="black"
@@ -757,8 +746,9 @@ export default function CreateAccountPage({ navigation }) {
 
                 <TextInput
                   value={middleName}
-                  onChangeText={(middleName) => {
-                    setMName(middleName);
+                  onChangeText={(text) => {
+                    const sanitizedText = sanitizeInput(text);
+                    setMName(sanitizedText);
                   }}
                   placeholder="Middle Name"
                   placeholderTextColor="black"
@@ -775,11 +765,11 @@ export default function CreateAccountPage({ navigation }) {
                   color="black"
                   style={globalStyles.login_Email_Icon}
                 />
-
                 <TextInput
                   value={lastName}
-                  onChangeText={(lastName) => {
-                    setLName(lastName);
+                  onChangeText={(text) => {
+                    const sanitizedText = sanitizeInput(text);
+                    setLName(sanitizedText);
                   }}
                   placeholder="Last Name"
                   placeholderTextColor="black"
@@ -797,19 +787,15 @@ export default function CreateAccountPage({ navigation }) {
                   style={styles.phoneNumberIcon}
                 />
 
-                <TextInput
-                  value={phone}
-                  onChangeText={(phone) => {
-                    setPhone(phone);
-                  }}
-                  placeholder="Phone Number"
-                  style={[
-                    globalStyles.login_Email_textInput,
-                    { marginLeft: 3 },
-                  ]}
-                  placeholderTextColor="black"
-                  keyboardType="number-pad"
-                />
+<TextInput
+          value={phone}
+          onChangeText={handlePhoneChange}
+          placeholder="Phone Number"
+          style={[globalStyles.login_Email_textInput, { marginLeft: 3 }]}
+          placeholderTextColor="black"
+          keyboardType="numeric"
+          maxLength={11} // Set maximum length to 11 digits
+        />
               </View>
 
               <View style={styles.ViewBirthdate}>
@@ -876,7 +862,7 @@ export default function CreateAccountPage({ navigation }) {
                   }}
                   placeholder="Address"
                   style={{
-                    fontSize: address ? 13 : 18,
+                    fontSize: address ? 13: 18,
                     fontFamily: "nunito-reg",
                     width: "90%",
                     marginLeft: 3,

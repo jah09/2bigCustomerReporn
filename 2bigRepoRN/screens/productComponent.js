@@ -125,16 +125,6 @@ export default function ProductComponent() {
       equalTo(selectedStationID)
     );
 
-    // const handleOthersProductsData = (snapshot) => {
-    //   const productsData = [];
-    //   snapshot.forEach((tanksuppSnapshot) => {
-    //     const prodData = tanksuppSnapshot.val();
-    //     productsData.push(prodData);
-    //   });
-    //   //console.log("line 164",prodData)
-    //   // setOtherProducts(productsData);
-    // };
-
     const unsubscribe = onValue(otherTanksupplyQuery, (snapshot) => {
       // console.log("PRODUCT SCREEN---tst", otherProductsQuery);
       const data = snapshot.val();
@@ -163,7 +153,6 @@ export default function ProductComponent() {
     });
     return () => unsubscribe();
   }, [selectedStationID, currentDate]);
-
   const [tankSupply, setTankSupply] = useState();
 
   const [thirdPartyProducts, setthirdPartyProducts] = useState();
@@ -206,7 +195,7 @@ export default function ProductComponent() {
     }
   }, [productData]);
 
-  //retreive otherProduct
+  //retreive thirdparty_PRODUCTS
   useLayoutEffect(() => {
     const thirdPartyProductsRef = ref(db, "thirdparty_PRODUCTS/");
     const thirdPartyProductsQuery = query(
@@ -214,15 +203,6 @@ export default function ProductComponent() {
       orderByChild("adminId"),
       equalTo(selectedStationID)
     );
-
-    // const handleOthersProductsData = (snapshot) => {
-    //   const productsData = [];
-    //   snapshot.forEach((tanksuppSnapshot) => {
-    //     const prodData = tanksuppSnapshot.val();
-    //     productsData.push(prodData);
-    //   });
-    //   setOtherProducts(productsData);
-    // };
 
     const unsubscribe = onValue(thirdPartyProductsQuery, (snapshot) => {
       // console.log("PRODUCT SCREEN---tst", otherProductsQuery);
@@ -236,6 +216,7 @@ export default function ProductComponent() {
         setthirdPartyProducts(thirdPartyProductsInformation);
         //  console.log("line 233", thirdPartyProductsInformation);
       } else {
+        setthirdPartyProducts([]);
         // console.log("No data at the moment- Product refill useEffect")
       }
     });
@@ -252,55 +233,6 @@ export default function ProductComponent() {
     }
   }, [thirdPartyProducts]);
 
-  // const debouncedSetStoreRatings = useCallback(
-  //   debounce((data) => {
-  //     setStoreRatings(data);
-  //   }, 500),
-  //   []
-  // );
-
-  //store rEview collection
-  // useEffect(() => {
-  //   const storeReviewRef = ref(db, "STOREREVIEW/");
-  //   //console.log("Test",storeReviewRef)
-  //   const storeReviewQuery = query(
-  //     storeReviewRef,
-  //     orderByChild("adminID"),
-  //     equalTo(selectedStationID)
-  //   );
-
-  //    // Create a debounced callback function that will update the storeRatings state
-  //    const debouncedSetStoreRatings = debounce((data) => {
-  //     setStoreRatings(data);
-  //   }, 500);
-  // //console.log("Test 256",storeReviewRef)
-  //  const listener= onValue(storeReviewQuery, (snapshot) => {
-  //     if (snapshot.exists()) {
-  //       const data = snapshot.val();
-  //       let storeReviewInfo = [];
-  //       if (data && Object.keys(data).length > 0) {
-  //         storeReviewInfo = Object.keys(data).map((key) => ({
-  //           id: key,
-
-  //           ...data[key],
-  //           firstName: customerData.firstName,
-  //           lastName: customerData.lastName,
-  //         }));
-  //       }
-  //      // console.log("line 266",storeReviewInfo)
-  //      debouncedSetStoreRatings(storeReviewInfo);
-
-  //     }else{
-  //       setStoreRatings([]);
-  //       //console.log("No data at the moment- Product refill useEffect")
-  //     }
-  //   });
-  //  // return () => unsubscribe(); // unsubscribe when component unmounts
-  //   // Return a cleanup function that will remove the Firebase listener when the component unmounts
-  //   return () => {
-  //     off(storeReviewQuery, 'value', listener);
-  //   };
-  // }, [selectedStationID, customerData,debouncedSetStoreRatings]);
   const [storeRatings, setStoreRatings] = useState({});
 
   //console.log("line 294",storeRatings);
@@ -378,6 +310,7 @@ export default function ProductComponent() {
       }));
 
       setSwapOptions(splitValuesSwapOptionArray);
+    //  console.log("swap options",splitValuesSwapOptionArray);
     }
   }, [newDeliveryDetails]);
   useEffect(() => {
@@ -604,7 +537,7 @@ export default function ProductComponent() {
                           borderRadius: 5,
                           padding: 0,
                           flexDirection: "row",
-                          width: 180,
+                          width: responsiveWidth(70),
                         }}
                       >
                         <TouchableOpacity
@@ -702,7 +635,7 @@ export default function ProductComponent() {
             {/* Submit button */}
             <View
               style={{
-                backgroundColor: "red",
+               // backgroundColor: "red",
                 marginTop: 10,
                 height: 50,
               }}
@@ -729,7 +662,7 @@ export default function ProductComponent() {
                     height: 40,
                   }}
                 >
-                  <Text style={[globalStyles.buttonText, { left: -8 }]}>
+                  <Text style={[globalStyles.buttonText, { left: -8,bottom:2 }]}>
                     Submit
                   </Text>
                   <MaterialIcons
@@ -770,6 +703,7 @@ export default function ProductComponent() {
                 paddingHorizontal: 10,
                 marginBottom: 25,
               }}
+              key={item.id}
             >
               <Text style={{ fontSize: 16, fontFamily: "nunito-semibold" }}>
                 {
@@ -853,14 +787,17 @@ export default function ProductComponent() {
                         Stocks: {item.pro_stockBalance} {item.pro_stockUnit}
                       </Text>
                     )} */}
-                     {item.pro_stockBalance&&item.pro_stockBalance !== "0" &&
-                    (
-                      <Text
-                        style={{ fontSize: 15, fontFamily: "nunito-light" }}
-                      >
-                        Stocks: {item.pro_stockBalance} {item.pro_stockUnit}
-                      </Text>
-                    )}
+                  {item.pro_stockBalance && item.pro_stockBalance !== "0" ? (
+                    <Text style={{ fontSize: 15, fontFamily: "nunito-light" }}>
+                      Stocks: {item.pro_stockBalance} {item.pro_stockUnit}
+                    </Text>
+                  ) : item.pro_stockBalance === "0" ||
+                    ((item.pro_stockQty === "" || item.pro_stockQty === null) &&
+                      item.pro_stockUnit) ? (
+                    <Text style={{ fontSize: 15, fontFamily: "nunito-light" }}>
+                      Out of stock
+                    </Text>
+                  ) : null}
 
                   {/* {item.pro_stockBalance !== "0" ? (
                     <Text style={{ fontSize: 15, fontFamily: "nunito-light" }}>
@@ -1062,6 +999,13 @@ export default function ProductComponent() {
                   </View>
                 </View>
               )}
+              ListEmptyComponent={()=>{
+              
+                <Text style={{ fontSize: 24, fontFamily: "nunito-bold", color: "black" }}>
+                  No third party products available
+                </Text>
+              
+              }}
             />
           </View>
 

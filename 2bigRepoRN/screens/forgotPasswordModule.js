@@ -46,7 +46,7 @@ export default function ForgotPasswordModule({ navigation }) {
         );
       })
       .catch((error) => {
-        console.log("Error sending password reset email:", error);
+       alert("Invalid Email", error);
       });
   };
 

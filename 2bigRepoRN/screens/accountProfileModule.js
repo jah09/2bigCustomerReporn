@@ -13,10 +13,12 @@ import React, { useEffect, useState } from "react";
 import { MaterialIcons, AntDesign } from "@expo/vector-icons";
 import CustomInput from "../shared/customInput";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ref, update, get, onValue, set} from "firebase/database";
+import { ref, update, get, onValue, set } from "firebase/database";
 import { db, auth } from "../firebaseConfig";
 import { firebase } from "../firebaseStorage";
 import * as ImagePicker from "expo-image-picker";
+import { SHA256 } from 'crypto-js';
+import { TextInput } from "react-native-paper";
 export default function AccountProfileModule({ navigation }) {
   const onPressHandler_toMainPage = () => {
     navigation.navigate("TabNavigator");
@@ -28,7 +30,7 @@ export default function AccountProfileModule({ navigation }) {
   };
 
   const [customerData, setCustomerData] = useState(null);
-  console.log("CUSTOMER ", customerData);
+ // console.log("CUSTOMER ", customerData);
   const [profileImage, setProfileImage] = useState("");
   // console.log("profile screen", customerData);
 
@@ -48,10 +50,23 @@ export default function AccountProfileModule({ navigation }) {
 
   //update
   const handleSaveChanges = () => {
+    // Sanitize firstName input
+    const sanitizedFirstName = customerData.firstName
+      .replace(/<[^>]+>/g, "")
+      .replace(/[^A-Za-z]/g, "");
+
+    // Validate phoneNumber input
+    const isValidPhoneNumber = /^\d{11}$/.test(customerData.phoneNumber);
+
+    if (!isValidPhoneNumber) {
+      alert("Phone Number must be 11 digits.");
+      return;
+    }
+
     // Update the customer data in Firebase Realtime Database
     const customerRef = ref(db, `CUSTOMER/${customerData.cusId}`);
     update(customerRef, {
-      firstName: customerData.firstName,
+      firstName: sanitizedFirstName,
       middleName: customerData.middleName,
       lastName: customerData.lastName,
       phoneNumber: customerData.phoneNumber,
@@ -59,7 +74,7 @@ export default function AccountProfileModule({ navigation }) {
       // address: customerData.address,
     })
       .then(() => {
-        alert("Profile Updated Succesfully");
+        alert("Profile Updated Successfully");
       })
       .catch((error) => {
         console.log(error);
@@ -70,7 +85,7 @@ export default function AccountProfileModule({ navigation }) {
   //logout
   const handleLogout = async () => {
     try {
-      await AsyncStorage.multiRemove(["customerData", "email", "password"]);
+      await AsyncStorage.multiRemove(["customerData", "email", "inputtedpassword"]);
       // navigate to login screen or any other screen
       // Get the current date and time
       const today = new Date();
@@ -81,11 +96,11 @@ export default function AccountProfileModule({ navigation }) {
       const minutes = String(today.getMinutes()).padStart(2, "0");
       const seconds = String(today.getSeconds()).padStart(2, "0");
       const formattedDate = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-  
+
       // Save the user log data
       const newUserLogId = Math.floor(Math.random() * 50000) + 100000;
       const newUserLog = newUserLogId;
-  
+
       set(ref(db, `CUSTOMERSLOG/${newUserLog}`), {
         dateLogout: formattedDate, // Set the logout date and time
         email: customerData.email, // Set the current logged-in employee ID
@@ -96,7 +111,7 @@ export default function AccountProfileModule({ navigation }) {
           {
             text: "Yes",
             onPress: () => {
-              navigation.navigate("Login", { email: "", password: "" });
+              navigation.navigate("Login", { email: "", inputtedpassword: "" });
             },
           },
           {
@@ -108,8 +123,10 @@ export default function AccountProfileModule({ navigation }) {
       console.log(error);
     }
   };
-  
-  
+
+  //const encryptedPassword = SHA256(password).toString();
+
+
   const [image, setImage] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [imageURL, setImageURL] = useState(null);
@@ -263,48 +280,63 @@ export default function AccountProfileModule({ navigation }) {
         {customerData !== null ? (
           <View>
             <CustomInput
-              placeholder="First Name"
               value={customerData.firstName}
-              onChangeText={(text) =>
-                setCustomerData({ ...customerData, firstName: text })
-              }
+              onChangeText={(text) => {
+                const sanitizedText = text
+                  .replace(/<[^>]+>/g, "")
+                  .replace(/[^A-Za-z]/g, "");
+                setCustomerData({ ...customerData, firstName: sanitizedText });
+              }}
             />
             <CustomInput
-              placeholder="Middle Name (Optional)"
               value={customerData.middleName}
               onChangeText={(text) =>
                 setCustomerData({ ...customerData, middleName: text })
               }
             />
             <CustomInput
-              placeholder="Last Name"
               value={customerData.lastName}
-              onChangeText={(text) =>
-                setCustomerData({ ...customerData, lastName: text })
-              }
+              onChangeText={(text) => {
+                const sanitizedText = text
+                  .replace(/<[^>]+>/g, "")
+                  .replace(/[^A-Za-z]/g, "");
+                setCustomerData({ ...customerData, lastName: sanitizedText });
+              }}
             />
             <CustomInput
               placeholder="Contact Number"
               value={customerData.phoneNumber}
-              onChangeText={(text) =>
-                setCustomerData({ ...customerData, phoneNumber: text })
-              }
+              onChangeText={(text) => {
+                const sanitizedText = text.replace(/[^0-9]/g, "");
+                setCustomerData({
+                  ...customerData,
+                  phoneNumber: sanitizedText,
+                });
+              }}
             />
-            <CustomInput
-              placeholder="Address"
-              value={customerData.address}
-              editable={false}
-              //onChangeText={(text) => setCustomerData({...customerData, address: text})}
-            />
+            <View style={styles.styleAdd}>
+              <Text
+                style={{
+                  textAlign: "center",
+                  fontSize: 14,
+                  fontWeight: "bold",
+                  marginTop: 40,
+                }}
+              >
+                {customerData.address &&
+                  customerData.address.split("\n").map((line, index) => (
+                    <Text key={index}>
+                      {line}
+                      {"\n"}
+                    </Text>
+                  ))}
+              </Text>
+            </View>
           </View>
         ) : (
           <Text>No customer data found</Text>
         )}
-        {/* <View >
-          <Text style={{ fontWeight: "bold", left: 20, marginTop: 25 }}>
-            Reward Points
-          </Text>
-        </View> */}
+       
 
         <TouchableOpacity onPress={handleSaveChanges}>
           <View style={styles.btn}>
@@ -312,27 +344,31 @@ export default function AccountProfileModule({ navigation }) {
           </View>
         </TouchableOpacity>
         <View style={{ backgroundColor: "transparent", height: 100 }}>
-  <Text style={{ fontWeight: "bold", left: 20, marginTop: 25 }}>
-    Reward Points
-  </Text>
-</View>
+          <Text style={{ fontWeight: "bold", left: 20, marginTop: 25 }}>
+            Reward Points
+          </Text>
+        </View>
 
-<View
-  style={{
-    backgroundColor: "transparent",
-    marginTop: -50,
-    marginBottom: 30,
-  }}
->
-  <CustomInput
-    value={customerData && customerData.walletPoints.toString()}
-    editable={false}
-    onChangeText={(text) =>
-      setCustomerData({ ...customerData, walletPoints: text })
-    }
-  />
-</View>
-
+        <View
+          style={{
+            backgroundColor: "transparent",
+            marginTop: -50,
+            marginBottom: 30,
+            marginLeft: 25,
+          }}
+        >
+          <CustomInput
+            value={
+              customerData && customerData.walletPoints
+                ? customerData.walletPoints.toString()
+                : "0"
+            }
+            editable={false}
+            onChangeText={(text) =>
+              setCustomerData({ ...customerData, walletPoints: text })
+            }
+          />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -395,6 +431,17 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     color: "white",
+  },
+  styleAdd: {
+    backgroundColor: "white",
+    left: 40,
+    width: "80%",
+    height: 100,
+    alignItems: "center",
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    borderColor: "gray",
+    marginVertical: 10,
   },
   rewardButton: {
     borderRadius: 5,

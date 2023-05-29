@@ -125,7 +125,7 @@ export default function ProductDetailsAndPlaceOrder({ navigation }) {
       newdeliveryTypes.push(deliveryType);
     }
   });
-   console.log("line 93", newdeliveryTypes);
+  console.log("line 93", newdeliveryTypes);
 
   const [checkedItemKey_paymentMethod, setCheckedItemKey_paymentMethod] =
     useState(null);
@@ -609,7 +609,7 @@ export default function ProductDetailsAndPlaceOrder({ navigation }) {
 
   //function to compute the choosen quantity and the product price.
   const compute = () => {
-    console.log("line 612",count)
+    console.log("line 612", count);
     if (count > 0) {
       let waterprice; //declare a variable waterprice
       if (
@@ -713,7 +713,6 @@ export default function ProductDetailsAndPlaceOrder({ navigation }) {
   const order_Size = `${item.pro_refillSize || item.other_productSize}`;
   const order_Unit = `${item.pro_refillUnit || item.other_productUnit}`;
 
- 
   //function to insert the data to database
   const createOrder = (CUSTOMERID) => {
     const RandomId = Math.floor(Math.random() * 50000) + 10000;
@@ -728,7 +727,7 @@ export default function ProductDetailsAndPlaceOrder({ navigation }) {
       order_WaterPrice: parseFloat(waterprice),
       order_Quantity: quantity,
       order_InitialAmount: parseFloat(initialAmount),
-      order_TotalAmount: parseFloat(totalAmount) ,
+      order_TotalAmount: parseFloat(totalAmount),
       order_DeliveryTypeValue: deliveryTypeValue,
       order_OrderTypeValue: orderTypeValue,
       order_GcashProofOfPayment: gcashProoflink_Storage ?? null,
@@ -740,7 +739,7 @@ export default function ProductDetailsAndPlaceOrder({ navigation }) {
       order_OrderStatus: orderStatus,
       order_ReservationDate: reservationDate,
       order_unit: order_Unit,
-      order_size:parseFloat (order_Size),
+      order_size: parseFloat(order_Size),
       cusId: CUSTOMERID,
       order_newDeliveryAddressOption: combinedData.DeliveryAddress ?? null,
       order_newDeliveryAddress: combinedData.address ?? null,
@@ -796,31 +795,30 @@ export default function ProductDetailsAndPlaceOrder({ navigation }) {
         alert("Error", JSON.stringify(error), "OK");
       });
 
-
     //date today
     const today = new Date();
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, "0");
     const day = String(today.getDate()).padStart(2, "0");
     const newformattedDate = `${year}-${month}-${day}`;
-    console.log("line 804",newformattedDate);
-    const status="unread";
-    const sender="Customer";
-    const receiver="Admin";
+    console.log("line 804", newformattedDate);
+    const status = "unread";
+    const sender = "Customer";
+    const receiver = "Admin";
     const notificationRandomId = Math.floor(Math.random() * 50000) + 10000;
     const newNotificationRandomKey = notificationRandomId;
     const notificationBody = "You have pending order/s.";
     set(ref(db, `NOTIFICATIONTEST/${newNotificationRandomKey}`), {
-      notificationID:newNotificationRandomKey,
+      notificationID: newNotificationRandomKey,
       orderID: parseFloat(newOrderKey),
       // notificationID:parseFloat(newOrderKey) ,
       admin_ID: passedAdminID,
       cusId: CUSTOMERID,
       body: notificationBody,
-      notificationDate:newformattedDate,
-      sender:sender,
-      receiver:receiver,
-      status:status
+      notificationDate: newformattedDate,
+      sender: sender,
+      receiver: receiver,
+      status: status,
     })
       .then(async () => {
         // console.log('Test if Save to db-----'+reservationDate );
@@ -930,7 +928,100 @@ export default function ProductDetailsAndPlaceOrder({ navigation }) {
   };
 
   //delivery Address
-
+  //test
+  if (selectedOrdertype === "PickUp" && reservationDate === null) {
+    Alert.alert("Warning", "Please choose a reservation date");
+  }
+  if (selectedOrdertype === "PickUp" && checkedItemKey_deliveryType === null) {
+    Alert.alert("Warning", "Please choose a delivery Type");
+  }
+  if (selectedOrdertype === "PickUp" && selectedpaymenthod === null) {
+    Alert.alert("Warning", "Please select a payment method");
+  }
+  if (checkedItemKey_orderType === null) {
+    Alert.alert("Warning", "Please choose a order type");
+  } else if (selectedOrdertype === "PickUp" && reservationDate === null) {
+    Alert.alert("Warning", "Please choose a reservation date");
+  } else if (
+    (checkedItemKey_deliveryType === "Standard" ||
+      checkedItemKey_deliveryType === "Reservation") &&
+    checkedItemKey_orderType === null
+  ) {
+    //This checks if the delivery type is either "standard" or "reservation". It uses the logical OR operator || to check if either of these conditions is true.
+    Alert.alert("Warning", "Please choose a delivery Type");
+  } else if (checkedItemKey_paymentMethod === null) {
+    // If both of these conditions are true, then the code inside of the block will execute and display an alert message
+    if (selectedOrdertype === "PickUp") {
+      createOrder(customerData.cusId);
+      //console.log("else block 959", passedRewardsData);
+      //console.log("else block 959", customerID);
+    } else {
+      Alert.alert("Warning", "Please select a payment method");
+    }
+  } else if (deliveryAddressOption === null) {
+    if (selectedOrdertype === "PickUp") {
+      createOrder(customerData.cusId);
+    } else {
+      Alert.alert("Warning", "Please select an delivery address");
+    }
+  } else if (combinedData && combinedData.DeliveryAddress === null) {
+    // alert("Please set your delivery address.");
+    if (selectedOrdertype === "PickUp") {
+      // createOrder(customerData.cusId);
+      combinedData.DeliveryAddress = null;
+    } else {
+      Alert.alert("Warning", "Please select an delivery address");
+      
+    }
+  } else {
+    // handle button press here
+    // console.log("else here");
+    // createOrder(customerData.cusId); //call this if all data is fill up
+    if (selectedpaymenthod === "Gcash") {
+      if (gcashProofImage === null) {
+        // console.log("line 1424, gcashproof is null");
+        setShowModal_ModeOfPayment(true);
+      }
+    } else if (selectedpaymenthod === "Points") {
+      //  console.log(" LINE 1419selectedpaymenthod=Points");
+      if (
+        rewardScreenNewModeOfPayment === "Gcash" &&
+        gcashProofImage === null
+      ) {
+        // console.log(
+        //   "LINE 1421 rewardScreenNewModeOfPayment=Gcash and gcashProofImage == null"
+        // );
+        setShowModal_ModeOfPayment(true);
+      } else {
+        createOrder(customerData.cusId, gcashProoflink_Storage); //call this if all data is fill up
+        ToastAndroid.show(
+          "Order successfully. Thank you for ordering" +
+            " " +
+            passedStationName +
+            ".",
+          ToastAndroid.LONG
+        );
+      }
+    } else if (selectedOrdertype === "PickUp") {
+      if (
+        selectedpaymenthod === "Points" &&
+        rewardScreenNewModeOfPayment === "Gcash " &&
+        gcashProofImage === null
+      ) {
+        console.log("inside this if line 1476");
+        setShowModal_ModeOfPayment(true);
+      }
+    } else {
+      createOrder(customerData.cusId); //call this if all data is fill up
+      ToastAndroid.show(
+        "Order successfully. Thank you for ordering" +
+          " " +
+          passedStationName +
+          ".",
+        ToastAndroid.LONG
+      );
+    }
+  }
   return (
     <SafeAreaView style={styles.safeviewStyle}>
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
