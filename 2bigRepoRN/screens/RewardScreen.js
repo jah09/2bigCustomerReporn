@@ -30,9 +30,13 @@ import {
   child,
 } from "firebase/database";
 import moment from "moment";
+import {
+  responsiveHeight,
+  responsiveWidth,
+} from "react-native-responsive-dimensions";
 import { globalStyles } from "../ForStyle/GlobalStyles";
 import * as ImagePicker from "expo-image-picker";
-import { truncate } from "lodash";
+import _, { truncate } from "lodash";
 export default function RewardScreen({ navigation }) {
   const route = useRoute();
 
@@ -46,10 +50,12 @@ export default function RewardScreen({ navigation }) {
     FinalTotalAmount,
     selectedItem,
     paymentMethods,
+    selectedOrdertype
   } = route.params ?? {
     passedStationName: null,
   };
-  // console.log("Mode of payment receiving",paymentMethods)
+   console.log("Mode of payment receiving",selectedOrdertype
+   )
 
   // setreceiverModeOfPayment(updatedPaymentMethods);
   const [receiverModeOfPayment, setreceiverModeOfPayment] = useState();
@@ -139,7 +145,7 @@ export default function RewardScreen({ navigation }) {
   //   });
   // }, [selectedStationID]);
   useLayoutEffect(() => {
-    const promoOfferedRef = ref(db, "PROMO_OFFERED/");
+    const promoOfferedRef = ref(db, "DISCOUNTCOUPON/");
     const promoOfferedQuery = query(
       promoOfferedRef,
       orderByChild("adminId"),
@@ -156,14 +162,14 @@ export default function RewardScreen({ navigation }) {
         // check and set expired coupons
         const currentDate = moment();
         const promoOfferedWithExpiration = promoOfferedInfo.map((promo) => {
-          const expirationDate = moment(promo.promoExpirationTo, "yyyy-MM-DDTHH:mm:ssZ");
+          const expirationDate = moment(promo.couponExpirationTo, "yyyy-MM-DDTHH:mm:ssZ");
           const isExpired = expirationDate < currentDate;
           const disabled = isExpired || expirationDate.isSame(currentDate, 'day');
           return {
             ...promo,
             isExpired,
             disabled,
-            promoExpirationTo: expirationDate.format("MM-DD-yyyy"),
+            couponExpirationTo: expirationDate.format("MM-DD-yyyy"),
           };
         });
        // console.log("line 163", promoOfferedWithExpiration);
@@ -317,16 +323,39 @@ export default function RewardScreen({ navigation }) {
 
   //function to deduct manually
   const manualPointsDeduct = () => {
-    // if (selectedStationID != couponAdminID) {
-    //   Alert.alert(
-    //     "Warning",
-    //     "You can't use your point earned from another station."
-    //   );
-    // } else {
-      if (parseFloat(manualTextinputValue) <= 0) {
-        Alert.alert("Warning", `Input value must be greater than zero.`);
+ 
+      // if (isNaN(parseFloat(manualTextinputValue)) || parseFloat(manualTextinputValue) <= 0) {
+      //   Alert.alert("Warning", "Input value must be a valid number and  greater than zero.");
+      // }
+      // else if (isNaN(manualTextinputValue) || !Number.isInteger(Number(manualTextinputValue))) {
+      //   alert(
+      //     "Please enter a valid number1."
+      //   );
+      // }
+      // else if (!/^\d+$/.test(manualTextinputValue)) {
+      //   alert(
+      //     "Please enter a valid number2."
+      //   );
+      // }
+      // else if (!/^\d+$/.test(manualTextinputValue) && !/^\d+\.\d+$/.test(manualTextinputValue)) {
+      //   alert(
+      //     "Please enter a valid number."
+      //   );
+      //   return;
+      // }
+      if (isNaN(parseFloat(manualTextinputValue)) || parseFloat(manualTextinputValue) <= 0) {
+        Alert.alert("Warning", "Input value must be a valid number and greater than zero.");
       }
-
+      else if (!/^\d+\.\d+$/.test(manualTextinputValue)) {
+        alert(
+          "Please enter a valid number."
+        );
+      }
+      else if (!/^\d+$/.test(manualTextinputValue)) {
+        alert(
+          "Please enter a valid number."
+        );
+      }
       //if ang ge enter na value is greater than sa customer pts
       else if (
         parseFloat(manualTextinputValue) > parseFloat(customerRewardsPoints)
@@ -778,19 +807,20 @@ export default function RewardScreen({ navigation }) {
                     customerRewardsPoints === 0 ||
                     !manualTextinputValue ||
                     manualTextinputValue === null ||
-                    manualTextinputValue === ""
+                    manualTextinputValue === "" || passedTotalAmount===0
                   }
                 >
                   <View
                     style={{
                       padding: 6,
                       backgroundColor:
-                        customerRewardsPoints === 0 || !manualTextinputValue
+                        customerRewardsPoints === 0 || !manualTextinputValue || passedTotalAmount===0 || passedTotalAmount===0.00
                           ? "gray"
                           : "#55BCF6",
 
                       borderRadius: 5,
                       //top: 15,
+
                       opacity: 0.8,
                       width: 75,
                     }}
@@ -836,9 +866,9 @@ export default function RewardScreen({ navigation }) {
                         setUseAllIsDisable(true);
                       }
                     }}
-                    keyboardType="numeric"
+                    keyboardType="default"
                     value={manualTextinputValue}
-                    editable={customerRewardsPoints != 0}
+                    editable={customerRewardsPoints != 0 || passedTotalAmount!=0.00  }
                   />
                 </View>
               </View>
@@ -877,10 +907,11 @@ export default function RewardScreen({ navigation }) {
               </Text>
               {receiverModeOfPayment &&
                 receiverModeOfPayment.map((item) => {
+                
                   const isChecked = item.key === checkedItemKey_paymentMethod;
-                  // const isCODDisabled =
-                  // selectedOrdertype === "PickUp" &&
-                  // item.label === "CashOnDelivery";
+                  const isCODDisabled =
+                  selectedOrdertype === "PickUp" &&
+                  item.label === "CashOnDelivery";
                   return (
                     <View
                       key={item.key}
@@ -907,7 +938,7 @@ export default function RewardScreen({ navigation }) {
                           setCheckedItemKey_paymentMethod(item.key);
                           console.log("payment clicked Value -->", item.value);
                         }}
-                        //  disabled={isCODDisabled}
+                        disabled={isCODDisabled}
                       >
                         <View
                           style={{
@@ -920,8 +951,8 @@ export default function RewardScreen({ navigation }) {
                             marginLeft: 10,
                             marginRight: 5,
                             //backgroundColor:'blue'
-                            // borderColor: isCODDisabled ? "gray" : "black",
-                            borderColor: "black",
+                             borderColor: isCODDisabled ? "gray" : "black",
+                            //borderColor:selectedOrdertype==="PickUp"? "gray" : "black",
                           }}
                         >
                           {isChecked && (
@@ -939,8 +970,8 @@ export default function RewardScreen({ navigation }) {
                           fontFamily: "nunito-light",
                           fontSize: 17,
                           flexDirection: "row",
-                          // color: isCODDisabled ? "gray" : "black",
-                          color: "black",
+                           color: isCODDisabled ? "gray" : "black",
+                         // color: "black",
                         }}
                       >
                         {item.label}
@@ -1021,7 +1052,7 @@ export default function RewardScreen({ navigation }) {
                       >
                         {/* 62CDFF   B0DAFF  BFDCE5*/}
                         <Text style={styles.productNameStyle}>
-                          {item.promoName}
+                          {item.couponName}
                         </Text>
                         <Text
                           style={{
@@ -1029,25 +1060,27 @@ export default function RewardScreen({ navigation }) {
                             fontSize: 15,
                           }}
                         >
-                          {item.promoDescription}
-                        </Text>
-
-                        <Text
-                          style={{
-                            fontFamily: "nunito-semibold",
-                            fontSize: 15,
-                          }}
-                        >
-                         {item.isExpired ? "Expired" : `Valid until ${item.promoExpirationTo}`}
+                          {item.couponDescription}
                         </Text>
 
                         <Text
                           style={{
                             fontFamily: "nunito-semibold",
                             fontSize: 15,
+                            top:"5%"
                           }}
                         >
-                          Points required {item.promoPointsRequiredToClaim}
+                         {item.isExpired ? "This coupon is was expired" : `Valid until ${item.couponExpirationTo}`}
+                        </Text>
+
+                        <Text
+                          style={{
+                            fontFamily: "nunito-semibold",
+                            fontSize: 15,
+                            top:"5%"
+                          }}
+                        >
+                          Points required {item.couponPointsRequiredToClaim}
                         </Text>
                       </View>
                     </View>
@@ -1115,15 +1148,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
 
-  manualModal: {
-    width: 300,
-    height: 250,
-    backgroundColor: "white",
-    borderBottomColor: "gray",
-    borderBottomWidth: 1,
-    borderRadius: 3,
-    elevation: 10,
-  },
+ 
   circular: {
     width: 75,
     height: 75,
@@ -1215,8 +1240,8 @@ const styles = StyleSheet.create({
   viewWaterItem: {
     padding: 3,
     //marginTop: 25,
-    width: "100%",
-    height: 80,
+    width: responsiveWidth(90),
+    height: responsiveHeight(18),
     marginLeft: 0,
     borderRadius: 10,
     marginRight: 5,

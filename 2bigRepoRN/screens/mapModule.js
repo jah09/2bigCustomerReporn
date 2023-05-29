@@ -378,10 +378,14 @@ export default function MapModule({}) {
           }}
           minZoomLevel={10}
           showsUserLocation={true}
+          
           showsMyLocationButton={true}
           showsBuildings={true}
+
           zoomEnabled={true}
-          showsTraffic={true}
+          showsTraffic={false}
+          
+
           showsCompass={true}
           showsIndoors={true}
           loadingEnabled={true}

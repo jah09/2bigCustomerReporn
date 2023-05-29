@@ -96,6 +96,7 @@ export default function OrderModule({}) {
       console.log("Order not found with ID", orderId);
     }
   };
+  
 
   //get the employee data
   useLayoutEffect(() => {
@@ -242,15 +243,22 @@ export default function OrderModule({}) {
 
   //function to check if the feedback input and rating is having a data.
   const handleSubmit = () => {
-    if (textinput_Feedback === null || textinput_Feedback.length > 25) {
-      ToastAndroid.show(
-        "Please enter a feedback or review with at least 20 characters",
-        ToastAndroid.LONG
-      );
+    if (textinput_Feedback === null || textinput_Feedback.length > 25 ) {
+      // ToastAndroid.show(
+      //   "Please enter a feedback or review with at least 20 characters",
+      //   ToastAndroid.LONG
+      // );
+      alert("Please enter a feedback or review with at least 20 characters");
       setIsButtonDisabled(true);
-    } else if (ratings === null || ratings < 1 || ratings > 5) {
+    } else if(typeof textinput_Feedback !=="string" ||  !/^[a-zA-Z\s]+$/.test(textinput_Feedback)){
+      alert(
+        "Please enter a valid feedback. Only letters and spaces are allowed."
+      );
+    }
+    
+    else if (ratings === null || ratings < 1 || ratings > 5) {
       //alert("Please enter a ratings");
-      alert("Please enter a valid rating");
+      alert("Please enter a valid rating.");
       setIsButtonDisabled(true);
     } else {
       console.log("this line", customerData.cusId);
@@ -1285,7 +1293,7 @@ export default function OrderModule({}) {
                         style={{
                           backgroundColor: item.driverId ? "#73a9c2" : "gray",
                           padding: 6,
-                          width: 110,
+                          width: responsiveWidth(33),
                           //  width: 130,
                           marginLeft: 0,
                           borderRadius: 5,
@@ -1298,6 +1306,7 @@ export default function OrderModule({}) {
                             fontSize: 15,
                             fontFamily: "nunito-semibold",
                             color: "black",
+                            marginLeft:5
                           }}
                         >
                           Driver's Location

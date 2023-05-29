@@ -12,6 +12,7 @@ import {
   ToastAndroid,
   ActivityIndicator,
 } from "react-native";
+import moment from "moment/moment";
 import React, {
   useState,
   useCallback,
@@ -43,7 +44,10 @@ import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { firebase } from "../firebaseStorage";
 import { useSafeAreaFrame } from "react-native-safe-area-context";
-import { responsiveWidth } from "react-native-responsive-dimensions";
+import {
+  responsiveHeight,
+  responsiveWidth,
+} from "react-native-responsive-dimensions";
 
 export default function CartScreen() {
   const route = useRoute();
@@ -292,7 +296,8 @@ export default function CartScreen() {
           ? parseFloat(newDeliveryDetails[0].vehicle3Fee)
           : null;
       setvechicle3fee(vehicle3Fee);
-    }
+      console.log("lne 298",vehicle3Fee)
+    } 
   }, [newDeliveryDetails]);
   const [vechicle1fee, setvechicle1fee] = useState();
   const [vechicle2fee, setvechicle2fee] = useState();
@@ -306,15 +311,21 @@ export default function CartScreen() {
       item.key === checkedItemKey_orderType ? null : item.key
     );
     if (item.value === "Delivery") {
-      Alert.alert(
-        "Note",
-        `Standard Delivery: Your order will be delivered within the day.\n\nExpress Delivery: Your order will be delivered within a specific span of time.\n\nReservation Delivery: You will be the one to decide when to deliver the water.\n\nDelivery fee is base on your distance from store.\n\nVehicle fee is base on your overall quantities.\n\n₱${vechicle1fee.toFixed(
-          2
-        )} for 1 pc/s.\n₱${vechicle2fee.toFixed(
-          2
-        )} for 2-5 pc/s\n₱${vechicle3fee.toFixed(2)} for 6 and more.`
-      );
+      // Alert.alert(
+      //   "Note",
+      //   `Standard Delivery: Your order will be delivered within the day.\n\nExpress Delivery: Your order will be delivered within a specific span of time.\n\nReservation Delivery: You will be the one to decide when to deliver the water.\n\nDelivery fee is base on your distance from store.\n\nVehicle fee is base on your overall quantities.\n\n₱${vechicle1fee.toFixed(
+      //     2
+      //   )} for 1 pc/s.\n₱${vechicle2fee.toFixed(
+      //     2
+      //   )} for 2-5 pc/s\n₱${vechicle3fee.toFixed(2)} for 6 and more.`
+      // );
+      let alertMessage = `Standard Delivery: Your order will be delivered within the day.\n\nExpress Delivery: Your order will be delivered within a specific span of time.\n\nReservation Delivery: You will be the one to decide when to deliver the water.\n\nDelivery fee is based on your distance from the store.\n\nVehicle fee is based on your overall quantities.\n\n₱${vechicle1fee.toFixed(2)} for 1 pc/s.\n₱${vechicle2fee.toFixed(2)} for 2-5 pc/s.`;
 
+      
+  if (vechicle3fee || !isNaN(vechicle3fee)) {
+    alertMessage += `\n₱${vechicle3fee.toFixed(2)} for 6 and more.`;
+  }
+  Alert.alert("Note", alertMessage);
       const deliveryTypeholder = [];
       const { stanDeliverytype, exDeliveryType, resDeliveryType } =
         newDeliveryDetails[0];
@@ -426,7 +437,7 @@ export default function CartScreen() {
   const [reservationDeliveryTypes, setreservationDeliveryTypes] = useState();
   const [selectedReserveDeliveryType, setselectedReserveDeliveryType] =
     useState();
-  //console.log("434",selectedReserveDeliveryType)
+   console.log("434",selectedReserveDeliveryType)
   const [
     checkedItemKey_reservationDeliveryTypes,
     setcheckedItemKey_reservationDeliveryTypes,
@@ -439,8 +450,14 @@ export default function CartScreen() {
   };
 
   //date for reservation date in reservation delivery Types
+  // const minDate = new Date(); // current date
+  // minDate.setHours(0, 0, 0, 0); // set hours, minutes, seconds, and milliseconds to zero
   const minDate = new Date(); // current date
-  minDate.setHours(0, 0, 0, 0); // set hours, minutes, seconds, and milliseconds to zero
+minDate.setDate(minDate.getDate() + 1); // add one day
+
+// Set hours, minutes, seconds, and milliseconds to zero
+minDate.setHours(0, 0, 0, 0);
+
   const [reserveDeliverydate, setreserveDeliverydate] = useState(new Date());
   const [reserveDeliverymode, setreserveDeliverymode] = useState("date");
   const [reserveDeliveryshow, setreserveDeliveryshow] = useState(false);
@@ -477,11 +494,14 @@ export default function CartScreen() {
       console.log("Reservation, Selected Delivery Type is  Standard");
       setreserveDeliverytext(fdate);
       setreservationDate_ReserveDeliveryTypes(fdate);
-      setreserveDeliveryTime("");
+      setreserveDeliveryTime("Reservation Time");
     } else {
       console.log("Reservation, Selected Delivery Type is  Express");
-      setreserveDeliveryTime(ftime);
+     
       setreserveDeliverytext(fdate);
+     
+       //setreserveDeliveryTime("Reservation Time");
+       setreserveDeliveryTime(ftime);
       setreservationDate_ReserveDeliveryTypes(fdate);
       setreservation_ReserveDeliveryTypes(ftime);
     }
@@ -507,16 +527,22 @@ export default function CartScreen() {
     } else if (item.value === "Gcash") {
       // setShowModal_ModeOfPayment(true);
     } else {
-      navigation.navigate("RewardScreen", {
-        passedStationName,
-        secondItem,
-        extractedDatas,
-        FinalTotalAmount: parseFloat(FinalTotalAmount),
-        customerData,
-        selectedItem,
-        paymentMethods,
-        gcashNumber,
-      });
+      // if(totalInitialAmount===0 || totalInitialAmount===0.00){
+      //   Alert.alert("Warning","Initial amount must not be a 0.");
+      // }else{
+        navigation.navigate("RewardScreen", {
+          passedStationName,
+          selectedOrdertype,
+          secondItem,
+          extractedDatas,
+          FinalTotalAmount: parseFloat(FinalTotalAmount),
+          customerData,
+          selectedItem,
+          paymentMethods,
+          gcashNumber,
+        });
+     
+    
       //console.log("inside else",rewardsData);
     }
   };
@@ -547,8 +573,18 @@ export default function CartScreen() {
           key: index + 1,
         })
       );
-      // console.log("338",splitValuesOrderTypeArray)
-      setPaymentMethods(splitValuesOrderTypeArray);
+      // Reorder the payment methods
+      const reorderedPaymentMethods = [
+        // Change the order here as desired
+        splitValuesOrderTypeArray.find((method) => method.label === "Gcash"),
+        splitValuesOrderTypeArray.find((method) => method.label === "Points"),
+        splitValuesOrderTypeArray.find(
+          (method) => method.label === "CashOnDelivery"
+        ),
+      ].filter(Boolean);
+
+      //console.log("338",reorderedPaymentMethods)
+      setPaymentMethods(reorderedPaymentMethods);
     } else {
       setPaymentMethods([]);
     }
@@ -1256,6 +1292,7 @@ export default function CartScreen() {
           blob.close();
           setgcashProoflink_Storage(url);
           //  console.log("before the createOrder", gcashProoflink_Storage);
+
           createOrder(customerData.cusId, url);
           setShowModal_ModeOfPayment(false);
           ToastAndroid.show(
@@ -1314,6 +1351,37 @@ export default function CartScreen() {
     }
   }, [totalAmount, totalPickUpfee]);
 
+  //handlesubmit for Reservation Delivery Type Modal
+  const ReservationDeliveryType_HandleSubmit = () => {
+    if (selectedReserveDeliveryType === "Standard") {
+      console.log("line 1335-->standard ");
+        if(!reservationDate_ReserveDeliveryTypes){
+          Alert.alert("Warning", "Please choose an reservation date.");
+        }
+        else{
+          setShowReservationModal(false);
+          setcheckedItemKey_reservationDeliveryTypes(null);
+          setreserveDeliverytext("Reservation Date");
+          setreserveDeliverydate(moment().toDate()); // Update reserveDeliverydate with the current date
+          //setselectedReserveDeliveryType(null);
+        }
+    }
+    else{
+      if(!reservationDate_ReserveDeliveryTypes){
+        Alert.alert("Warning", "Please choose an reservation date.");
+      }
+      else if(!reservationTime){
+        Alert.alert("Warning", "Please choose an reservation time.");
+      }
+      else{
+        setShowReservationModal(false);
+        setreserveDeliverytext("Reservation Date");
+        setcheckedItemKey_reservationDeliveryTypes(null);
+        setreserveDeliveryTime("Reservation Time");
+        setselectedReserveDeliveryType(null);
+      }
+    }
+  };
   //Save to ORDER/CUSTOMERSLOG/NOTIFICATION database-------------------------------------------------------------
   const [vehicleFeeSaveToDb, setvehicleFeeSaveToDb] = useState();
   const [waterproduct, setWaterproduct] = useState(
@@ -1336,8 +1404,9 @@ export default function CartScreen() {
 
   const [orderTypeValue, setOrderTypeValue] = useState(); //pass the order Type  value, "??" is used to check if null ba or di
   const [deliveryTypeValue, setdeliveryTypeValue] = useState();
-
+ // console.log("line 1355", deliveryTypeValue);
   const [reservationDate, setReservationDate] = useState("");
+ // console.log("Pickup reservation date-->line 1354", reservationDate);
   const [
     reservationDate_ReserveDeliveryTypes,
     setreservationDate_ReserveDeliveryTypes,
@@ -1348,7 +1417,7 @@ export default function CartScreen() {
   // console.log("Gcash link",gcashProoflink_Storage)
   //setselectedPaymentMethod
   const [selectedpaymenthod, setselectedPaymentMethod] = useState();
-  console.log("selected payment method", selectedpaymenthod);
+ // console.log("selected payment method", selectedpaymenthod);
   const [selectedpaymentMethod_Gcash, setselectedpaymentMethod_Gcash] =
     useState();
   //get rewardspoints collection from REWARDSYSTEM COLLECTION passedAdminID
@@ -1369,7 +1438,7 @@ export default function CartScreen() {
 
             ...data[key],
           }));
-          console.log("rewards data", rewardsInfo);
+        //  console.log("rewards data", rewardsInfo);
           setrewardsData(rewardsInfo);
         } else {
           console.log("Else here");
@@ -1396,76 +1465,98 @@ export default function CartScreen() {
           "Your application is Declined because your uploaded documents doesn't meet the requirements"
         );
       } else {
-        if (checkedItemKey_orderType === null) {
-          Alert.alert("Warning", "Please choose a order type");
-        } else if (
-          (checkedItemKey_deliveryType === "Standard" ||
-            checkedItemKey_deliveryType === "Reservation") &&
-          checkedItemKey_orderType === null
-        ) {
-          //This checks if the delivery type is either "standard" or "reservation". It uses the logical OR operator || to check if either of these conditions is true.
-          Alert.alert("Warnin", "Please choose a delivery Type");
-        } else if (checkedItemKey_paymentMethod === null) {
-          // If both of these conditions are true, then the code inside of the block will execute and display an alert message
-          if (selectedOrdertype === "PickUp") {
-            createOrder(customerData.cusId);
-            //console.log("else block 959", passedRewardsData);
-            //console.log("else block 959", customerID);
-          } else {
-            Alert.alert("Warning", "Please select a payment method");
+        if (selectedOrdertype === "PickUp") {
+          console.log("Selected Order type is pIckup");
+          if (selectedOrdertype === null) {
+            Alert.alert("Warning", "Please choose an order type.");
+          } 
+          else if (
+            checkedItemKey_deliveryType === "Reservation" &&
+            (!text || text === null|| !reservationDate)
+          ){
+            Alert.alert("Warning", "Please choose an reservation date.");
           }
-        } else if (deliveryAddressOption === null) {
-          if (selectedOrdertype === "PickUp") {
-            createOrder(customerData.cusId);
-          } else {
-            Alert.alert("Warning", "Please select an delivery address");
+          else if (checkedItemKey_deliveryType === null) {
+            Alert.alert("Warning", "Please choose an delivery type.");
+          }  else if (
+            combinedData &&
+            combinedData.deliveryAddressOption === null
+          ) {
+            console.log("No Pickup address");
+          } else if (checkedItemKey_paymentMethod === null) {
+            Alert.alert("Warning", "Please choose an payment method .");
+          } 
+          else if(!totalInitialAmount){
+            Alert.alert("Warning", "Please make an order.");
           }
-        } else if (combinedData.DeliveryAddress === null) {
-          // alert("Please set your delivery address.");
-          if (selectedOrdertype === "PickUp") {
-            // createOrder(customerData.cusId);
-            combinedData.DeliveryAddress = null;
-          } else {
-            Alert.alert("Warning", "Please select an delivery address");
+          else {
+            if (selectedpaymenthod === "Gcash") {
+              if (gcashProofImage === null) {
+                setShowModal_ModeOfPayment(true);
+              }
+            } else if (selectedpaymenthod === "Points") {
+              if (
+                rewardScreenNewModeOfPayment === "Gcash" &&
+                gcashProofImage === null
+              ) {
+                setShowModal_ModeOfPayment(true);
+              } else {
+                createOrder(customerData.cusId, gcashProoflink_Storage); //call this if all data is fill up
+                ToastAndroid.show(
+                  "Order successfully. Thank you for ordering" +
+                    " " +
+                    passedStationName +
+                    ".",
+                  ToastAndroid.LONG
+                );
+              }
+            }
           }
         } else {
-          // handle button press here
-          // console.log("else here");
-          // createOrder(customerData.cusId); //call this if all data is fill up
-          if (selectedpaymenthod === "Gcash") {
-            if (gcashProofImage === null) {
-              // console.log("line 1424, gcashproof is null");
-              setShowModal_ModeOfPayment(true);
-            }
-          } else if (selectedpaymenthod === "Points") {
-            //  console.log(" LINE 1419selectedpaymenthod=Points");
-            if (
-              rewardScreenNewModeOfPayment === "Gcash" &&
-              gcashProofImage === null
-            ) {
-              // console.log(
-              //   "LINE 1421 rewardScreenNewModeOfPayment=Gcash and gcashProofImage == null"
-              // );
-              setShowModal_ModeOfPayment(true);
+          // selectedOrdertype is Delivery
+          console.log(
+            "Selected Order type is delivery line 1475----------------------->"
+          );
+          if (selectedOrdertype === null) {
+            Alert.alert("Warning", "Please choose an order type.");
+          } else if (checkedItemKey_deliveryType === null) {
+            Alert.alert("Warning", "Please choose a delivery type.");
+          } else if (checkedItemKey_paymentMethod === null) {
+            Alert.alert("Warning", "Please choose a payment method.");
+          } else if (!combinedData) {
+            Alert.alert("Warning", "Please choose a delivery address.");
+          }
+          else if(!totalInitialAmount){
+            Alert.alert("Warning", "Please make an order.");
+          } else {
+            if (selectedpaymenthod === "Gcash") {
+              if (gcashProofImage === null) {
+                setShowModal_ModeOfPayment(true);
+              }
+            } else if (selectedpaymenthod === "Points") {
+              if (
+                rewardScreenNewModeOfPayment === "Gcash" &&
+                gcashProofImage === null
+              ) {
+                setShowModal_ModeOfPayment(true);
+              } else {
+                createOrder(customerData.cusId, gcashProoflink_Storage);
+                ToastAndroid.show(
+                  "Order successfully. Thank you for ordering " +
+                    passedStationName +
+                    ".",
+                  ToastAndroid.LONG
+                );
+              }
             } else {
-              createOrder(customerData.cusId, gcashProoflink_Storage); //call this if all data is fill up
+              createOrder(customerData.cusId, gcashProoflink_Storage);
               ToastAndroid.show(
-                "Order successfully. Thank you for ordering" +
-                  " " +
+                "Order successfully. Thank you for ordering " +
                   passedStationName +
                   ".",
                 ToastAndroid.LONG
               );
             }
-          } else {
-            createOrder(customerData.cusId); //call this if all data is fill up
-            ToastAndroid.show(
-              "Order successfully. Thank you for ordering" +
-                " " +
-                passedStationName +
-                ".",
-              ToastAndroid.LONG
-            );
           }
         }
       }
@@ -1515,9 +1606,11 @@ export default function CartScreen() {
         qtyPerItem: count[item.pro_refillId || item.thirdparty_productId] || 0,
       })),
 
-      order_newDeliveryAddressOption: combinedData
-        ? combinedData.DeliveryAddress
-        : null,
+      order_newDeliveryAddressOption:
+        combinedData && combinedData.DeliveryAddress
+          ? combinedData.DeliveryAddress
+          : null, // or '' for an empty string
+
       order_newDeliveryAddress:
         (combinedData && combinedData.newAddressaddress) ?? null,
       order_newDeliveryAddLattitude: combinedData
@@ -1581,9 +1674,9 @@ export default function CartScreen() {
         setFinalTotalAmount();
         setdeliveyfeeValue(0);
         setgcashProoflink_Storage(null);
-        // setTimeout(() => {
-        //   navigation.navigate("Order");
-        // }, 2000);
+        setTimeout(() => {
+          navigation.navigate("Order");
+        }, 2000);
       })
       .catch((error) => {
         console.log("Error Saving to Database", error);
@@ -1718,13 +1811,14 @@ export default function CartScreen() {
           Object.keys(customerData).find(
             (key) => customerData[key].cusId === CUSTOMERID
           );
-       // console.log("what is customer:", customer);
+        // console.log("what is customer:", customer);
         //console.log("what is customer 1119", typeof CUSTOMERID, CUSTOMERID);
         if (
           typeof customerData === "object" &&
           customerData.cusId === CUSTOMERID
         ) {
-          pointsTobeAddedd = rewardsData && parseFloat( rewardsData[0].rewardPointsToEarn);
+          pointsTobeAddedd =
+            rewardsData && parseFloat(rewardsData[0].rewardPointsToEarn);
           const customerPointsRef = ref(db, `CUSTOMER/${CUSTOMERID}`); //get the db reference
           // Use the `get` method to retrieve the current walletPoints value
           get(customerPointsRef).then((snapshot) => {
@@ -1739,7 +1833,6 @@ export default function CartScreen() {
             console.log("line 1737", updatedPoints);
             update(customerPointsRef, { walletPoints: updatedPoints })
               .then(() => {
-               
                 console.log(
                   "Per transaction--->Customer points updated successfully!"
                 );
@@ -1748,14 +1841,32 @@ export default function CartScreen() {
                 console.error("Error updating customer points: ", error);
               });
           });
-
-
         }
       }
     } else {
       console.log("No data available for reward data");
     }
+    //save to customercollection
+    const customerRef = ref(db, `CUSTOMER/${CUSTOMERID}`); //get the db reference
+    get(customerRef).then((snapshot) => {
+      const orderedStore = snapshot.val().orderedStore || {}; // Retrieve existing orderedStore or initialize as an empty object
 
+      const key = Object.keys(orderedStore).length; // Calculate the next sequential key
+      orderedStore[key] = {
+        adminId: passedAdminID
+      };
+      const customerData = {
+        ...snapshot.val(),
+        orderedStore: orderedStore
+      };
+      update(customerRef, customerData)
+        .then(() => {
+          console.log("line 1864--->admin ID store to customer collection");
+        })
+        .catch((error) => {
+          console.error("Error updating customer points: ", error);
+        });
+    });
     //save to user log collection
     const action = "Order";
     //console.log("Points added 1754 above the customersLog", pointsTobeAddedd);
@@ -1981,6 +2092,7 @@ export default function CartScreen() {
                     setreserveDeliverytext("Reservation Date");
                     setreserveDeliveryTime("Reservation Time");
                     setselectedReserveDeliveryType(null);
+                    setreserveDeliverydate(moment().toDate()); // Update reserveDeliverydate with the current date
                   }}
                 >
                   <AntDesign
@@ -2083,8 +2195,9 @@ export default function CartScreen() {
                   onPress={() => {
                     if (selectedReserveDeliveryType === "Standard") {
                       reserveDeliveryshowMode("date");
-                    } else {
+                    } else if(selectedReserveDeliveryType === "Express"){
                       reserveDeliveryshowMode("date");
+                      setreserveDeliveryTime("Reservation Time"); // Reset the reservation time to the initial value
                     }
                   }}
                   disabled={!selectedReserveDeliveryType}
@@ -2115,6 +2228,7 @@ export default function CartScreen() {
                   display="default"
                   onChange={reserveDeliveryonChange}
                   minimumDate={minDate}
+                 
                 />
               )}
 
@@ -2173,13 +2287,14 @@ export default function CartScreen() {
                 }}
               >
                 <TouchableOpacity
-                  onPress={() => {
-                    setShowReservationModal(false);
-                    setcheckedItemKey_reservationDeliveryTypes(null);
-                    // setreserveDeliverytext("Reservation Date");
-                    // setreserveDeliveryTime("Reservation Time");
-                    // setselectedReserveDeliveryType(null);
-                  }}
+                  // onPress={() => {
+                  //   setShowReservationModal(false);
+                  //   setcheckedItemKey_reservationDeliveryTypes(null);
+                  //   // setreserveDeliverytext("Reservation Date");
+                  //   // setreserveDeliveryTime("Reservation Time");
+                  //   // setselectedReserveDeliveryType(null);
+                  // }}
+                  onPress={ReservationDeliveryType_HandleSubmit}
                   disabled={!selectedReserveDeliveryType}
                 >
                   <View
@@ -2407,7 +2522,13 @@ export default function CartScreen() {
         //     </View>
       />
       <ScrollView>
-        <View style={{ backgroundColor: "transparent", height: 540, top: 0 }}>
+        <View
+          style={{
+            backgroundColor: "transparent",
+            height: responsiveHeight(80),
+            top: 0,
+          }}
+        >
           <View style={{ justifyContent: "center", alignItems: "center" }}>
             <Text
               style={{
@@ -2421,11 +2542,11 @@ export default function CartScreen() {
           </View>
           <View
             style={{
-              backgroundColor: "gray",
+              backgroundColor: "transparent",
               width: "95%",
               marginLeft: 10,
               marginTop: 15,
-              height: 540,
+              height: responsiveHeight(72),
             }}
           >
             {/* view for order type */}
@@ -2439,85 +2560,96 @@ export default function CartScreen() {
               >
                 Order Type
               </Text>
-              {newOrder_Type &&
-                newOrder_Type.map((item) => {
-                  const isChecked = item.key === checkedItemKey_orderType;
-                  return (
-                    <View
-                      key={item.key}
-                      style={{
-                        backgroundColor: "red",
-                        marginTop: 35,
-                        height: 25,
-                        borderRadius: 5,
-                        padding: 0,
-                        flexDirection: "row",
-                        width: responsiveWidth(30),
+              <View
+                style={{
+                  flexDirection: "row",
+                  marginTop: responsiveHeight(5),
+                  width: responsiveWidth(85),
+                  height: responsiveHeight(5),
+                  marginLeft: responsiveWidth(-20),
+                }}
+              >
+                {newOrder_Type &&
+                  newOrder_Type.map((item) => {
+                    const isChecked = item.key === checkedItemKey_orderType;
 
-                        justifyContent: "center",
-                        marginLeft: responsiveWidth(-19),
-                        marginRight:responsiveWidth(20),
-                        //marginRight: 63,
-                        // elevation: 2,
-                        alignItems: "center",
-                      }}
-                    >
-                      <TouchableOpacity
-                        onPress={() => {
-                          handleItemChecked_orderType(item);
-                          setOrderTypeValue(item.value);
-                          setselectedOrderType(item.value);
-                          console.log(
-                            "Order Type clicked value-->",
-                            item.value
-                          );
+                    return (
+                      <View
+                        key={item.key}
+                        style={{
+                          // backgroundColor: "green",
+                          // marginTop: 2,
+                          height: 25,
+                          borderRadius: 5,
+                          padding: 0,
+                          flexDirection: "row",
+                          width: responsiveWidth(30),
+
+                          justifyContent: "center",
+                          //marginLeft: responsiveWidth(-19),
+                          marginRight: responsiveWidth(1),
+                          //marginRight: 63,
+                          // elevation: 2,
+                          alignItems: "center",
                         }}
-                        //disabled={selectedDeliveryType === "Express"}
                       >
-                        <View
+                        <TouchableOpacity
+                          onPress={() => {
+                            handleItemChecked_orderType(item);
+                            setOrderTypeValue(item.value);
+                            setselectedOrderType(item.value);
+                            console.log(
+                              "Order Type clicked value-->",
+                              item.value
+                            );
+                          }}
+                          //disabled={selectedDeliveryType === "Express"}
+                        >
+                          <View
+                            style={{
+                              width: 20,
+                              height: 20,
+                              borderWidth: 1,
+                              borderRadius: 4,
+                              justifyContent: "center",
+                              alignItems: "center",
+                              marginLeft: 0,
+                              marginRight: 5,
+                              // borderColor:
+                              //   selectedDeliveryType == "Express"
+                              //     ? "gray"
+                              //     : "black",
+                              borderColor: "black",
+                            }}
+                          >
+                            {isChecked && (
+                              <MaterialIcons
+                                name="done"
+                                size={16}
+                                color="black"
+                                styles={{ alignItems: "center" }}
+                              />
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                        <Text
                           style={{
-                            width: 20,
-                            height: 20,
-                            borderWidth: 1,
-                            borderRadius: 4,
-                            justifyContent: "center",
-                            alignItems: "center",
-                            marginLeft: 0,
-                            marginRight: 5,
-                            // borderColor:
-                            //   selectedDeliveryType == "Express"
+                            fontFamily: "nunito-light",
+                            fontSize: 17,
+                            flexDirection: "row",
+                            // color:
+                            //   selectedDeliveryType === "Express"
                             //     ? "gray"
                             //     : "black",
-                            borderColor: "black",
+                            color: "black",
                           }}
                         >
-                          {isChecked && (
-                            <MaterialIcons
-                              name="done"
-                              size={16}
-                              color="black"
-                              styles={{ alignItems: "center" }}
-                            />
-                          )}
-                        </View>
-                      </TouchableOpacity>
-                      <Text
-                        style={{
-                          fontFamily: "nunito-light",
-                          fontSize: 17,
-                          flexDirection: "row",
-                          // color:
-                          //   selectedDeliveryType === "Express"
-                          //     ? "gray"
-                          //     : "black",
-                          color: "black",
-                        }}
-                      >
-                        {item.label}
-                      </Text>
-                    </View>
-                  );
-                })}
+                          {item.label}
+                        </Text>
+                      </View>
+                    );
+                  })}
+              </View>
             </View>
 
             {/* view for Delivery type */}
@@ -2527,89 +2659,102 @@ export default function CartScreen() {
                   fontSize: 17,
                   fontFamily: "nunito-semibold",
                   marginLeft: 5,
+                  // bottom:responsiveHeight(0.5)
                 }}
               >
                 Delivery Type
               </Text>
-              {deliveryTypes &&
-                deliveryTypes.map((item) => {
-                  const isChecked = item.key === checkedItemKey_deliveryType;
-                  const isExpressDisabled =
-                    selectedOrdertype === "PickUp" && item.label === "Express";
-                  return (
-                    <View
-                      key={item.key}
-                      style={{
-                        // backgroundColor: "red",
-                        marginTop: 35,
-                        height: 25,
-                        borderRadius: 5,
-                        padding: 0,
-                        flexDirection: "row",
-                        width: 100,
+              <View
+                style={{
+                  //backgroundColor: "red",
+                  flexDirection: "row",
+                  marginTop: responsiveHeight(5),
+                  width: responsiveWidth(85),
+                  height: responsiveHeight(5),
+                  marginLeft: responsiveWidth(-20),
+                }}
+              >
+                {deliveryTypes &&
+                  deliveryTypes.map((item) => {
+                    const isChecked = item.key === checkedItemKey_deliveryType;
+                    const isExpressDisabled =
+                      selectedOrdertype === "PickUp" &&
+                      item.label === "Express";
+                    return (
+                      <View
+                        key={item.key}
+                        style={{
+                          // backgroundColor: "red",
+                          //marginTop: 35,
+                          height: 25,
+                          borderRadius: 5,
+                          padding: 0,
+                          flexDirection: "row",
+                          // width: 100,
 
-                        justifyContent: "center",
-                        marginLeft: -85,
-                        marginRight: 80,
-                        // elevation: 2,
-                        alignItems: "center",
-                      }}
-                    >
-                      <TouchableOpacity
-                        onPress={() => {
-                          handleItemChecked_deliveryType(item);
-
-                          setdeliveryTypeValue(item.value);
-                          setCheckedItemKey_deliveryType(item.key);
-                          console.log(
-                            "if unsa ang ge click nga value/key/label--->",
-                            item.value,
-                            item.key,
-                            item.label
-                          );
+                          justifyContent: "center",
+                          // marginLeft: -85,
+                          //marginRight: 80,
+                          // elevation: 2,
+                          alignItems: "center",
                         }}
-                        disabled={isExpressDisabled}
                       >
-                        <View
+                        <TouchableOpacity
+                          onPress={() => {
+                            handleItemChecked_deliveryType(item);
+
+                            setdeliveryTypeValue(item.value);
+                            setCheckedItemKey_deliveryType(item.key);
+                            console.log(
+                              "if unsa ang ge click nga value/key/label--->",
+                              item.value,
+                              item.key,
+                              item.label
+                            );
+                          }}
+                          disabled={isExpressDisabled}
+                        >
+                          <View
+                            style={{
+                              width: 20,
+                              height: 20,
+                              borderWidth: 1,
+                              borderRadius: 4,
+                              justifyContent: "center",
+                              alignItems: "center",
+                              marginLeft: 10,
+                              marginRight: 5,
+                              borderColor: isExpressDisabled ? "gray" : "black",
+                            }}
+                          >
+                            {isChecked && (
+                              <MaterialIcons
+                                name="done"
+                                size={16}
+                                color={
+                                  isExpressDisabled && item.label === "Express"
+                                    ? "gray"
+                                    : "black"
+                                }
+                                styles={{ alignItems: "center" }}
+                              />
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                        <Text
                           style={{
-                            width: 20,
-                            height: 20,
-                            borderWidth: 1,
-                            borderRadius: 4,
-                            justifyContent: "center",
-                            alignItems: "center",
-                            marginLeft: 10,
-                            marginRight: 5,
-                            borderColor: isExpressDisabled ? "gray" : "black",
+                            fontFamily: "nunito-light",
+                            fontSize: 17,
+                            flexDirection: "row",
+                            color: isExpressDisabled ? "gray" : "black",
                           }}
                         >
-                          {isChecked && (
-                            <MaterialIcons
-                              name="done"
-                              size={16}
-                              color={
-                                isExpressDisabled && item.label === "Express"
-                                  ? "gray"
-                                  : "black"
-                              }
-                              styles={{ alignItems: "center" }}
-                            />
-                          )}
-                        </View>
-                      </TouchableOpacity>
-                      <Text
-                        style={{
-                          fontFamily: "nunito-light",
-                          fontSize: 17,
-                          flexDirection: "row",
-                          color: isExpressDisabled ? "gray" : "black",
-                        }}
-                      >
-                        {item.label}
-                      </Text>
-                    </View>
-                  );
-                })}
+                          {item.label}
+                        </Text>
+                      </View>
+                    );
+                  })}
+              </View>
             </View>
 
             {/* View for payment */}
@@ -2619,85 +2764,101 @@ export default function CartScreen() {
                   fontSize: 17,
                   fontFamily: "nunito-semibold",
                   marginLeft: 8,
+                  top: "2%",
                 }}
               >
                 Mode of Payment
               </Text>
-              {paymentMethods &&
-                paymentMethods.map((item) => {
-                  const isChecked = item.key === checkedItemKey_paymentMethod;
-                  const isCODDisabled =
-                    selectedOrdertype === "PickUp" &&
-                    item.label === "CashOnDelivery";
-                  return (
-                    <View
-                      key={item.key}
-                      style={{
-                       backgroundColor: "red",
-                        marginTop: 35,
-                        height: 25,
-                        borderRadius: 5,
-                        padding: 0,
-                        flexDirection: "row",
-                        width: responsiveWidth(40),
 
-                        justifyContent: "center",
-                        marginLeft: -90,
-                        marginRight: 95,
-                        // elevation: 2,
-                        // marginLeft: responsiveWidth(-19),
-                        // marginRight:responsiveWidth(20),
-                        alignItems: "center",
+              <View
+                style={{
+                  // backgroundColor: "green",
+                  flexDirection: "row",
+                  marginTop: responsiveHeight(5),
+                  width: responsiveWidth(100),
+                  height: responsiveHeight(5),
+                  marginLeft: responsiveWidth(-28),
+                }}
+              >
+                {paymentMethods &&
+                  paymentMethods.map((item) => {
+                    const isChecked = item.key === checkedItemKey_paymentMethod;
+                    const isCODDisabled =
+                      selectedOrdertype === "PickUp" &&
+                      item.label === "CashOnDelivery";
+                    return (
+                      <View
+                        key={item.key}
+                        style={{
+                          //  backgroundColor: "red",
+                          //marginTop: 35,
+                          height: 25,
+                          borderRadius: 5,
+                          padding: 0,
+                          flexDirection: "row",
+                          width: responsiveWidth(40),
 
-                        
-                      }}
-                    >
-                      <TouchableOpacity
-                        onPress={() => {
-                          handleItemchecked_paymentMethod(item);
-                          setselectedPaymentMethod(item.value);
-                          setCheckedItemKey_paymentMethod(item.key);
-                          console.log("payment clicked Value -->", item.value);
+                          //justifyContent: "center",
+                          // marginLeft: -90,
+                          // marginRight: 95,
+                          // elevation: 2,
+                          marginLeft: responsiveWidth(0),
+                          marginRight: responsiveWidth(-16),
+                          alignItems: "center",
                         }}
-                        disabled={isCODDisabled}
                       >
-                        <View
+                        <TouchableOpacity
+                          onPress={() => {
+                            handleItemchecked_paymentMethod(item);
+                            setselectedPaymentMethod(item.value);
+                            setCheckedItemKey_paymentMethod(item.key);
+                            console.log(
+                              "payment clicked Value -->",
+                              item.value
+                            );
+                          }}
+                          disabled={isCODDisabled}
+                        >
+                          <View
+                            style={{
+                              width: 20,
+                              height: 20,
+                              borderWidth: 1,
+                              borderRadius: 4,
+                              justifyContent: "center",
+                              alignItems: "center",
+                              marginLeft: 10,
+                              marginRight: 5,
+                              //backgroundColor:'blue'
+                              borderColor: isCODDisabled ? "gray" : "black",
+                              // borderColor:"black"
+                            }}
+                          >
+                            {isChecked && (
+                              <MaterialIcons
+                                name="done"
+                                size={16}
+                                color="black"
+                                styles={{ alignItems: "center" }}
+                              />
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                        <Text
                           style={{
-                            width: 20,
-                            height: 20,
-                            borderWidth: 1,
-                            borderRadius: 4,
-                            justifyContent: "center",
-                            alignItems: "center",
-                            marginLeft: 10,
-                            marginRight: 5,
-                            //backgroundColor:'blue'
-                            borderColor: isCODDisabled ? "gray" : "black",
+                            fontFamily: "nunito-light",
+                            fontSize: 17,
+                            flexDirection: "row",
+                            color: isCODDisabled ? "gray" : "black",
+                            //color:"black"
                           }}
                         >
-                          {isChecked && (
-                            <MaterialIcons
-                              name="done"
-                              size={16}
-                              color="black"
-                              styles={{ alignItems: "center" }}
-                            />
-                          )}
-                        </View>
-                      </TouchableOpacity>
-                      <Text
-                        style={{
-                          fontFamily: "nunito-light",
-                          fontSize: 17,
-                          flexDirection: "row",
-                          color: isCODDisabled ? "gray" : "black",
-                        }}
-                      >
-                        {item.label}
-                      </Text>
-                    </View>
-                  );
-                })}
+                          {item.label}
+                        </Text>
+                      </View>
+                    );
+                  })}
+              </View>
             </View>
 
             {/* view for reservation Date */}
@@ -2706,7 +2867,7 @@ export default function CartScreen() {
                 style={{
                   fontSize: 17,
                   fontFamily: "nunito-semibold",
-                  marginLeft: 2,
+                  marginLeft: 0,
                 }}
               >
                 {text}
@@ -2764,7 +2925,7 @@ export default function CartScreen() {
                     "line 2638 cart screen",
                     parseFloat(passedTotalAmount)
                   );
-                  console.log("cart screen", selectedpaymenthod);
+                  console.log("cart screen", selectedReserveDeliveryType);
                   navigation.navigate("NewDeliveryAdd", {
                     passedStationName,
                     selectedItem,
@@ -2773,6 +2934,7 @@ export default function CartScreen() {
                       parseFloat(passedTotalAmount) || FinalTotalAmount,
                     rewardScreenNewModeOfPayment,
                     selectedpaymenthod,
+                    selectedReserveDeliveryType
                   });
                   // console.log("test 1009", selectedItem);
                 }}
@@ -2783,6 +2945,7 @@ export default function CartScreen() {
                     fontSize: 17,
                     fontFamily: "nunito-semibold",
                     marginLeft: 8,
+                    top: "2%",
                   }}
                 >
                   Delivery Address
@@ -2943,7 +3106,7 @@ export default function CartScreen() {
                     <Text
                       style={[
                         globalStyles.buttonText,
-                        { marginTop: 0, left: -8 },
+                        { left: -8, bottom: "5%" },
                       ]}
                     >
                       Place Order
@@ -3020,8 +3183,8 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   modeofPaymentModal: {
-    width: 310,
-    height: 350,
+    width: responsiveWidth(85),
+    height: responsiveHeight(55),
     backgroundColor: "white",
     borderBottomColor: "gray",
     borderBottomWidth: 1,
@@ -3090,9 +3253,9 @@ const styles = StyleSheet.create({
   },
   viewDeliveryAddress: {
     backgroundColor: "white",
-    width: 140,
-    height: 30,
-    padding: 6,
+    width: responsiveWidth(40),
+    height: responsiveHeight(4),
+    padding: 2,
     borderRadius: 8,
     marginTop: 15,
     elevation: 3,
@@ -3111,11 +3274,11 @@ const styles = StyleSheet.create({
   },
   viewForModeofPayment: {
     backgroundColor: "white",
-    width: 140,
-    height: 30,
-    padding: 6,
+    width: responsiveWidth(40),
+    height: responsiveHeight(4),
+    padding: 2,
     borderRadius: 8,
-    marginTop: 50,
+    marginTop: "12%",
     elevation: 3,
     flexDirection: "row",
   },
@@ -3132,20 +3295,22 @@ const styles = StyleSheet.create({
   },
   ViewforDelivery: {
     backgroundColor: "white",
-    width: 120,
+    width: responsiveWidth(33),
     height: 30,
-    padding: 6,
+    padding: 2,
     borderRadius: 8,
-    marginTop: 50,
+    marginTop: "12%",
     elevation: 3,
     flexDirection: "row",
     //marginRight:5,
     //justifyContent:'space-between',
+    // width: responsiveWidth(28),
+    height: responsiveHeight(4),
   },
   viewOrderType: {
     backgroundColor: "white",
-    width: 100,
-    height: 30,
+    width: responsiveWidth(28),
+    height: responsiveHeight(5),
     padding: 6,
     borderRadius: 8,
     //marginTop: 30,
