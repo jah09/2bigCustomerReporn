@@ -40,6 +40,7 @@ export default function OrderModule({}) {
   // const deviceWidth = Dimensions.get("window").width;
   const [deviceHeight, setdeviceHeight] = useState();
   const [deviceWidth, setdeviceWidth] = useState();
+  
   useEffect(() => {
     const deviceHeight = Dimensions.get("window").height;
     const deviceWidth = Dimensions.get("window").width;
@@ -1287,11 +1288,11 @@ export default function OrderModule({}) {
                       onPress={() => {
                         handleViewDriverLocation(item.driverId, item.orderID);
                       }}
-                      disabled={!item.driverId}
+                      disabled={!item.driverId || item.order_OrderStatus==="Delivered" }
                     >
                       <View
                         style={{
-                          backgroundColor: item.driverId ? "#73a9c2" : "gray",
+                          backgroundColor: item.driverId ? "#73a9c2" : (item.order_OrderStatus === "Delivered" ? "gray" : "#73a9c2"),
                           padding: 6,
                           width: responsiveWidth(33),
                           //  width: 130,
