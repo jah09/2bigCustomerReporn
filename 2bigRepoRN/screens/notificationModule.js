@@ -23,8 +23,6 @@ import { Fontisto } from "@expo/vector-icons";
 import moment from "moment";
 import { NotificationContext } from "../shared/NotificationContext";
 import Toast from 'react-native-toast-message';
-
-
 export default function NotificationScreen() {
   const [notifications, setNotifications] = useState([]);
   console.log("Notification:", notifications);
@@ -36,7 +34,9 @@ export default function NotificationScreen() {
   const navigation = useNavigation();
   //const { unreadCount } = useContext(NotificationContext);
 
+
   console.log("unreadCount:", unreadCount);
+
   useEffect(() => {
     async function fetchNotifications() {
       const customerData = JSON.parse(
@@ -44,6 +44,7 @@ export default function NotificationScreen() {
       );
       if (customerData) {
         const customerId = customerData.cusId;
+
         console.log("CUSTOMER:", customerId);
         const notificationsRef = ref(db, "NOTIFICATION/");
         console.log("NOTIF TABLE:", notificationsRef);
@@ -57,6 +58,7 @@ export default function NotificationScreen() {
           (snapshot) => {
             if (snapshot.exists()) {
               const data = snapshot.val();
+
 
               const NotifInformation = Object.keys(data)
                 .map((key) => ({
@@ -83,6 +85,7 @@ export default function NotificationScreen() {
               console.log("SCHED:", scheduledNotifications);
               displayScheduledNotificationsAsToasts(scheduledNotifications);
               
+
             }
           },
           (error) => {
@@ -100,6 +103,7 @@ export default function NotificationScreen() {
 
     return () => clearInterval(intervalId);
   }, []);
+
   
   const displayScheduledNotificationsAsToasts = (scheduledNotifications) => {
     scheduledNotifications.forEach((notification) => {
@@ -115,12 +119,14 @@ export default function NotificationScreen() {
 
   
 
+
   const handleNotificationPress = async (notification) => {
     if (notification.status === "unread") {
       const notificationRef = ref(db, `NOTIFICATION/${notification.id}`);
       await update(notificationRef, { status: "read" });
       setReadNotifications([...readNotifications, notification]);
     }
+
     console.log("NOTIFI:", notification);
     console.log("NOTIFI:", typeof notification);
     const orderID = notification.orderID;
@@ -129,11 +135,13 @@ export default function NotificationScreen() {
     if (notification.orderID) {
       const orderID = notification.orderID;
       console.log("OrderID:", orderID);
+
       navigation.navigate("Order", { orderID });
     } else {
       console.log("Notification does not have an orderID property.");
     }
   };
+
   const handleClickMarkAll = async () => {
     // Update the status of all unread notifications to "read"
     const customerData = JSON.parse(await AsyncStorage.getItem("customerData"));
@@ -185,6 +193,7 @@ export default function NotificationScreen() {
         (error) => {
           console.error(error);
         }
+
       );
     }
   };
@@ -213,6 +222,7 @@ export default function NotificationScreen() {
       <ScrollView>
         <View>
           <Text style={styles.text1}>Notifications</Text>
+
         </View>
         <View style={{ marginLeft: 220 }}>
           <TouchableOpacity onPress={handleClickMarkAll}>
@@ -282,8 +292,7 @@ export default function NotificationScreen() {
       </ScrollView>
     </SafeAreaView>
   );
-}
-
+      }  
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -294,12 +303,9 @@ const styles = StyleSheet.create({
     marginVertical: 10,
     padding: 20,
     backgroundColor: "#F8E2CF",
-    //backgroundColor: "red",
     borderRadius: 10,
     elevation: 5,
     height: 120,
-    //  flexDirection: "row",
-    // alignItems: "center",
   },
   readNotification: {
     backgroundColor: "white",
@@ -309,7 +315,6 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 15,
-    //marginBottom: 15,
     fontWeight: "bold",
     marginLeft: 90,
   },
@@ -323,11 +328,13 @@ const styles = StyleSheet.create({
     marginLeft: 20,
     marginBottom: 20,
   },
+
   text3: {
     color: "black",
     textDecorationLine: "underline",
     fontWeight: "bold",
   },
+
   deleteButton: {
     backgroundColor: "black",
     marginTop: 5,
@@ -353,6 +360,7 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 20,
   },
+
   badge: {
     backgroundColor: "red",
     borderRadius: 10,

@@ -17,7 +17,7 @@ import { query, ref, onValue } from "firebase/database";
 export default function StationModule() {
   //create a variable for
   const [adminInfo, setadminInfo] = useState({});
-  //  console.log("STATION SCREEN--ADMIN INFORMATION--",adminInfo);
+ // console.log("STATION SCREEN--ADMIN INFORMATION--",adminInfo);
 
   const locations = Object.values(adminInfo).map((admin) => ({
     idno: admin.idno,
@@ -45,6 +45,7 @@ export default function StationModule() {
         // console.log("set admin info data-->",  data);
       }
     } catch (error) {
+
       console.log(error);
       alert("Error fetching data: ", error);
     }
@@ -80,6 +81,7 @@ export default function StationModule() {
       if (data !== null) {
         const customerData = JSON.parse(data);
         setCustomerData(customerData); //call the state function
+    //    console.log("line 84 in station screen",customerData)
       }
     } catch (error) {
       console.log(error);

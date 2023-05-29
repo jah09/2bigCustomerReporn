@@ -1,6 +1,10 @@
 import { useRoute } from "@react-navigation/native";
 import { useState, useRef } from "react";
 import {
+  responsiveHeight,
+  responsiveWidth,
+} from "react-native-responsive-dimensions";
+import {
   StyleSheet,
   Text,
   View,
@@ -21,20 +25,35 @@ import { MaterialIcons } from "@expo/vector-icons";
 export default function NewDeliveryAddressScreen({ navigation }) {
   //receive the passedStation from other screen
   const route = useRoute();
-  const { passedStationName, extractedDatas, item, selectedItem ,passedTotalAmount,FinalTotalAmount,
-    selectedpaymenthod,rewardScreenNewModeOfPayment} =
-    route.params ?? {
-      passedStationName: null,
-      passedTotalAmount
-    };
-    console.log("line 29 new delivery add screen",typeof passedTotalAmount, passedTotalAmount,typeof FinalTotalAmount,FinalTotalAmount)
-  console.log("Receive new delivery address",selectedpaymenthod)
+  const {
+    passedStationName,
+    extractedDatas,
+    item,
+    selectedReserveDeliveryType,
+    selectedItem,
+    passedTotalAmount,
+    FinalTotalAmount,
+    selectedpaymenthod,
+    rewardScreenNewModeOfPayment,
+  } = route.params ?? {
+    passedStationName: null,
+    passedTotalAmount,
+  };
+  console.log(
+    "line 29 new delivery add screen",
+    typeof passedTotalAmount,
+    passedTotalAmount,
+    typeof FinalTotalAmount,
+    FinalTotalAmount
+  );
+  console.log("Receive new delivery address",selectedReserveDeliveryType,
+  );
   //button disable
 
-  const onPresshandler_toStationPage = () => {
-    //  console.log("send 36",secondItem, combinedData);
-    navigation.goBack();
-  };
+  // const onPresshandler_toStationPage = () => {
+  //   //  console.log("send 36",secondItem, combinedData);
+  //   navigation.goBack();
+  // };
 
   const DeliveryAddressOption = [
     {
@@ -64,7 +83,6 @@ export default function NewDeliveryAddressScreen({ navigation }) {
       // setShowdeliveryAddressModal(true);
       //  navigation.navigate("NewDeliveryAdd",{passedStationName,extractedDatas,secondItem });
     }
-    
   };
   const handleSubmit = () => {
     if (!deliveryAddressOption) {
@@ -75,22 +93,24 @@ export default function NewDeliveryAddressScreen({ navigation }) {
     if (deliveryAddressOption === "Same as Home Address") {
       setreceiverContactNumber(null);
       setLandmarkData(null);
-      setnewDeliveryAddress(null)
+      setnewDeliveryAddress(null);
       setnewDeliveryAddressaLatitude(null);
       setnewDeliveryAddressaLongitude(null);
       Alert.alert("Delivery address confirmed", "Thank you", [
         {
           text: "OK",
           onPress: () => {
-           // console.log("same as home",passedTotalAmount,FinalTotalAmount)
+            // console.log("same as home",passedTotalAmount,FinalTotalAmount)
             //console.log("same as home send to cart screen",selectedpaymenthod)
             navigation.navigate("CartScreen", {
               combinedData,
               extractedDatas,
               selectedItem,
-              passedTotalAmount:parseFloat(passedTotalAmount)  || FinalTotalAmount,
+              passedTotalAmount:
+                parseFloat(passedTotalAmount) || FinalTotalAmount,
               rewardScreenNewModeOfPayment,
-              selectedpaymenthod
+              selectedpaymenthod,
+              selectedReserveDeliveryType
             });
           },
         },
@@ -98,31 +118,48 @@ export default function NewDeliveryAddressScreen({ navigation }) {
     } else {
       if (!landmarkData || !newDeliveryAddress) {
         alert(
-          "Please enter a landmark or address for the new delivery address."
+          "Please enter a  landmark or address for the new delivery address."
+        );
+        return;
+      } else if (
+        typeof landmarkData !== "string" ||
+        !/^[a-zA-Z\s]+$/.test(landmarkData)
+      ) {
+        alert(
+          "Please enter a valid landmark. Only letters and spaces are allowed."
         );
         return;
       } else if (
         !receiverContactNumber ||
         receiverContactNumber.length !== 11
       ) {
-        alert("Please enter a valid number.");
+        alert("Please enter less than 11 digits number.");
         return;
-      } else {
+      } 
+      else if (
+        !receiverContactNumber ||
+        typeof receiverContactNumber !== 'string' ||
+        /[^0-9]/.test(receiverContactNumber)
+      ) {
+        alert("Only numbers");
+        return;
+      }else {
         Alert.alert("Delivery address confirmed", "Thank you", [
           {
             text: "OK",
             onPress: () => {
               //console.log("newdelivery add send to cart screen",selectedpaymenthod)
-             // console.log("new delivery add",passedTotalAmount,FinalTotalAmount)
+              // console.log("new delivery add",passedTotalAmount,FinalTotalAmount)
               navigation.navigate("CartScreen", {
                 combinedData,
                 extractedDatas,
                 selectedItem,
                 deliveryAddressOption,
-                passedTotalAmount:parseFloat(passedTotalAmount) || FinalTotalAmount,
+                passedTotalAmount:
+                  parseFloat(passedTotalAmount) || FinalTotalAmount,
                 rewardScreenNewModeOfPayment,
-                selectedpaymenthod
-
+                selectedpaymenthod,
+                selectedReserveDeliveryType
               });
             },
           },
@@ -131,7 +168,6 @@ export default function NewDeliveryAddressScreen({ navigation }) {
     }
   };
 
-  
   const [landmarkData, setLandmarkData] = useState();
   const [newDeliveryAddress, setnewDeliveryAddress] = useState();
   const [newDeliveryAddressLatitude, setnewDeliveryAddressaLatitude] =
@@ -162,13 +198,13 @@ export default function NewDeliveryAddressScreen({ navigation }) {
       >
         <View style={styles.container}>
           <View style={styles.viewBackBtn}>
-            <MaterialIcons
+            {/* <MaterialIcons
               name="arrow-back-ios"
               size={24}
               color="black"
               onPress={onPresshandler_toStationPage}
               style={{ right: 70 }}
-            />
+            /> */}
             <View style={styles.viewwatername}>
               <Text style={styles.textwatername}>{passedStationName}</Text>
             </View>
@@ -187,13 +223,13 @@ export default function NewDeliveryAddressScreen({ navigation }) {
                     <View
                       key={item.key}
                       style={{
-                       //  backgroundColor: "red",
+                        //backgroundColor: "red",
                         marginTop: 20,
                         height: 25,
                         borderRadius: 5,
                         padding: 0,
                         flexDirection: "row",
-                        width: 160,
+                        width: responsiveWidth(50),
                       }}
                     >
                       <TouchableOpacity
@@ -258,7 +294,7 @@ export default function NewDeliveryAddressScreen({ navigation }) {
                         ? "black"
                         : "gray"
                     }
-                    keyboardType="numeric"
+                    keyboardType="default"
                     editable={
                       deliveryAddressOption === "New Delivery Address"
                         ? true
@@ -329,10 +365,13 @@ export default function NewDeliveryAddressScreen({ navigation }) {
                       }}
                       onPress={(data, details = null) => {
                         const { formatted_address, geometry } = details;
+                        const {description}=data;
                         const { lat, lng } = geometry.location;
-                        console.log("line 329", data);
+                        //console.log("line 357", description);
+                        //console.log("line 329", details);
                         setShowLandmark(true);
-                        setnewDeliveryAddress(formatted_address);
+                      //  setnewDeliveryAddress(formatted_address);
+                      setnewDeliveryAddress(description);
                         setnewDeliveryAddressaLatitude(lat);
                         setnewDeliveryAddressaLongitude(lng);
                       }}
@@ -344,7 +383,7 @@ export default function NewDeliveryAddressScreen({ navigation }) {
                       nearbyPlacesAPI="GooglePlacesSearch"
                     />
                   </View>
-                </View> 
+                </View>
               )}
 
               {showLandmark && (
@@ -457,7 +496,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   viewwatername: {
-    // backgroundColor: "yellow",
+   // backgroundColor: "yellow",
     width: 180,
     justifyContent: "center",
   },
@@ -470,7 +509,7 @@ const styles = StyleSheet.create({
     width: 180,
     textAlign: "center",
     alignItems: "center",
-    right: 20,
+    right: 10,
   },
   wrapperWaterProduct: {
     height: 300,

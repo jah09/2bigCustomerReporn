@@ -83,7 +83,9 @@ export default function LoginModule({ navigation, route }) {
 
   const [currentDate, setCurrentDate] = useState("");
 
-    const handleLogin = async () => {
+
+  const handleLogin = async () => {
+
     try {
       const auth = getAuth();
       const inputtedpassword = SHA256(password).toString();
@@ -139,6 +141,8 @@ export default function LoginModule({ navigation, route }) {
       return null;
     }
   };
+  
+  
   
   const storeCustomerData = async (customerData) => {
     try {
@@ -265,3 +269,7 @@ export default function LoginModule({ navigation, route }) {
     </SafeAreaView>
   );
 }
+
+
+// Email: rheatrinidad@gmail.com
+// Password: *Rhea123*

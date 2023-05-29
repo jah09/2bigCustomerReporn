@@ -30,7 +30,7 @@ export default function AccountProfileModule({ navigation }) {
   };
 
   const [customerData, setCustomerData] = useState(null);
-  console.log("CUSTOMER ", customerData);
+ // console.log("CUSTOMER ", customerData);
   const [profileImage, setProfileImage] = useState("");
   // console.log("profile screen", customerData);
 
