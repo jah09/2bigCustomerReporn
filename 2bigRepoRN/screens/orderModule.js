@@ -40,6 +40,7 @@ export default function OrderModule({}) {
   // const deviceWidth = Dimensions.get("window").width;
   const [deviceHeight, setdeviceHeight] = useState();
   const [deviceWidth, setdeviceWidth] = useState();
+  
   useEffect(() => {
     const deviceHeight = Dimensions.get("window").height;
     const deviceWidth = Dimensions.get("window").width;

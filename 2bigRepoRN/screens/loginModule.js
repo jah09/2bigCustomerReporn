@@ -8,7 +8,7 @@ import {
   Keyboard,
   ScrollView,
   SafeAreaView,
-  Dimensions
+  Dimensions,
 } from "react-native";
 import customStatusBar from "../shared/customStatusBar";
 import React, { useState, useEffect } from "react";
@@ -17,8 +17,9 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { Ionicons } from "@expo/vector-icons";
 import { globalStyles } from "../ForStyle/GlobalStyles";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { SHA256 } from "crypto-js";
 
-import { db, getDatabase } from "../firebaseConfig";
+import { db } from "../firebaseConfig";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ref,
@@ -27,14 +28,12 @@ import {
   equalTo,
   onValue,
   set,
-  get
+  get,
 } from "firebase/database";
-
 
 //import { onValue, push, set } from "firebase/database";
 
 export default function LoginModule({ navigation, route }) {
-  
   const onPressHandler_forCreateAccount = () => {
     // navigation.navigate('CreateAccount');
     navigation.navigate("CreateAccount");
@@ -83,14 +82,21 @@ export default function LoginModule({ navigation, route }) {
   }, []);
 
   const [currentDate, setCurrentDate] = useState("");
-  const handleLogin = async () => {
+
+    const handleLogin = async () => {
     try {
       const auth = getAuth();
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const inputtedpassword = SHA256(password).toString();
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        inputtedpassword
+      );
       const user = userCredential.user;
-      console.log("Logged in with:", user.email);
+      console.log("Logged in with:", inputtedpassword);
+      const customerData = await fetchCustomerData(email,inputtedpassword);
+      console.log("Data:", customerData);
   
-      const customerData = await fetchCustomerData(email);
       if (customerData) {
         await storeCustomerData(customerData);
         await logCustomerLogin(email);
@@ -99,12 +105,17 @@ export default function LoginModule({ navigation, route }) {
         alert("No customer found with this email");
       }
     } catch (error) {
-      console.log(error);
+      console.log("108",error);
       alert("Please check your email and password.");
     }
   };
   
-  const fetchCustomerData = async (email) => {
+  const handleLoginError = () => {
+    console.log("Invalid password");
+    alert("Incorrect password. Please try again.");
+  };
+  
+  const fetchCustomerData = async (email, inputtedpassword) => {
     const customerRef = ref(db, "CUSTOMER");
     const customerQuery = query(
       customerRef,
@@ -112,8 +123,18 @@ export default function LoginModule({ navigation, route }) {
       equalTo(email)
     );
     const snapshot = await get(customerQuery);
+  
     if (snapshot.exists()) {
-      return snapshot.val()[Object.keys(snapshot.val())[0]];
+      const customerData = snapshot.val()[Object.keys(snapshot.val())[0]];
+      const storedPassword = customerData.password;
+        console.log("line 126",storedPassword)
+        console.log("line 127",inputtedpassword)
+      // Compare the hashed passwords
+      if (inputtedpassword === storedPassword) {
+        return customerData;
+      } else {
+        return null;
+      }
     } else {
       return null;
     }
@@ -128,6 +149,7 @@ export default function LoginModule({ navigation, route }) {
     }
   };
   
+
   const logCustomerLogin = async (email) => {
     const userLogId = Math.floor(Math.random() * 50000) + 100000;
     const newUserLog = userLogId;
@@ -146,8 +168,6 @@ export default function LoginModule({ navigation, route }) {
       alert("Error saving data: ", error);
     }
   };
-  
-  // function to clear login credentials from local storage
 
   return (
     <SafeAreaView style={globalStyles.safeviewStyle}>
