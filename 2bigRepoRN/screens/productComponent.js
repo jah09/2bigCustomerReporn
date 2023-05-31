@@ -738,7 +738,7 @@ export default function ProductComponent() {
                   />
                   <View
                     style={{ flexDirection: "row" }}
-                    key={item.thirdparty_productId}
+                  
                   >
                     <Text
                       style={{

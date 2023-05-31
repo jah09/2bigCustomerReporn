@@ -35,19 +35,22 @@ import {
 } from "firebase/database";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ScrollView } from "react-native-web";
+
 export default function OrderModule({}) {
   // const deviceHeight = Dimensions.get("window").height;
   // const deviceWidth = Dimensions.get("window").width;
   const [deviceHeight, setdeviceHeight] = useState();
   const [deviceWidth, setdeviceWidth] = useState();
-  
+
+
+
   useEffect(() => {
     const deviceHeight = Dimensions.get("window").height;
     const deviceWidth = Dimensions.get("window").width;
     setdeviceWidth(deviceWidth);
     setdeviceHeight(deviceHeight);
-    console.log("device height line 40---->", deviceHeight);
-    console.log("devide width line 41---->", deviceWidth);
+    // console.log("device height line 40---->", deviceHeight);
+    // console.log("devide width line 41---->", deviceWidth);
   }, []);
 
   const styleTypes = ["default", "dark-content", "light-content"];
@@ -59,9 +62,7 @@ export default function OrderModule({}) {
   const [customerId, setCustomerId] = useState(null);
   // console.log('orderDetails-customerData--',customerData);
   const [orderInfo, setOrderInfo] = useState([]);
-  const [orderInformationDelivered, setorderInformationDelivered] = useState(
-    []
-  );
+
   const [showModal, setShowModal] = useState(false);
   const [selectedItemID, setSelectedItemID] = useState(null);
   //  console.log("line 54", selectedItemID);
@@ -72,24 +73,39 @@ export default function OrderModule({}) {
     setSelectedItemID({ admin_ID, order_StoreName, orderID });
     setShowModal(true);
   };
-  const [showDetails, setShowDetails] = useState(true);
+
   const [driverData, setDriverData] = useState();
   const [driverLocation, setDriverLocation] = useState();
   //console.log("line 52",driverLocation);
+ 
+  
+
 
   //function nga mo filter if unsa ang GE CLICK NGA DRIVER'S LOCATION, E PASA DIRE ANG ORDER ID NGA GE PRESSED OG ANG DRIVER LOCATION
   const handleViewDriverLocation = (driverId, orderId) => {
-    //we will find sa oderInfo base on orderID nga mo mattch sa orderId which is ang ge presssed, if naay sulod then mo sud sa if(order)
     const order = orderInfo.find((order) => order.orderID === orderId);
-
-    if (order) {
-      //console.log("inside line 60",driverLocation)
-      const driverLatLong =
-        driverLocation.find((driver) => driver.driverId === driverId) || null;
+    if (order) {  
+      console.log("inside line 85", orderId);
+      const driverLatLong = driverLocation.find((driver) => driver.driverId === driverId) || null;
+    
+      const  newDeliveryAddress_Latlong=[];
+      const deliveryOption=order.order_newDeliveryAddressOption;
+      console.log("Order details",deliveryOption);
       if (driverLatLong) {
-        console.log("Driver LatLong", driverLatLong);
-        // do something with the driverLatLong, such as navigate to the Maps screen and pass it as a parameter
-        navigation.navigate("Maps", { driverLatLong, displayPolyline: true });
+        if(deliveryOption==="New Delivery Address"){
+          const newDeliveryAddressLatLong = {
+            latitude: order.order_newDeliveryAddLattitude,
+            longitude: order.order_newDeliveryAddLongitude,
+          };
+          newDeliveryAddress_Latlong.push(newDeliveryAddressLatLong);
+          console.log("New Delivery add",newDeliveryAddress_Latlong);
+          navigation.navigate("MapScreenforDelivery", { driverLatLong, displayPolyline: true ,newDeliveryAddress_Latlong,orderId});
+        }
+        else{
+          navigation.navigate("MapScreenforDelivery", { driverLatLong, displayPolyline: true ,newDeliveryAddress_Latlong:[],orderId});
+        }
+      
+      
       } else {
         console.log("Driver not found with ID", driverId);
       }
@@ -97,7 +113,7 @@ export default function OrderModule({}) {
       console.log("Order not found with ID", orderId);
     }
   };
-  
+
 
   //get the employee data
   useLayoutEffect(() => {
@@ -195,7 +211,7 @@ export default function OrderModule({}) {
                 if (emp) {
                   return {
                     ...order,
-                    driverLatt: emp.lattitude,
+                    driverLatt: emp.latitude,
                     driverLong: emp.longitude,
                   };
                 } else {
@@ -221,7 +237,7 @@ export default function OrderModule({}) {
   }, [customerId, driverData]);
 
   //it goes here
-  const updateOrderStatus = (orderID, status) => {
+  const updateOrderStatus = (orderID, status) => {  
     const ordersRef = ref(db, "ORDERS/");
     const orderRef = child(ordersRef, orderID.toString());
     update(orderRef, {
@@ -244,20 +260,21 @@ export default function OrderModule({}) {
 
   //function to check if the feedback input and rating is having a data.
   const handleSubmit = () => {
-    if (textinput_Feedback === null || textinput_Feedback.length > 25 ) {
+    if (textinput_Feedback === null || textinput_Feedback.length > 25) {
       // ToastAndroid.show(
       //   "Please enter a feedback or review with at least 20 characters",
       //   ToastAndroid.LONG
       // );
       alert("Please enter a feedback or review with at least 20 characters");
       setIsButtonDisabled(true);
-    } else if(typeof textinput_Feedback !=="string" ||  !/^[a-zA-Z\s]+$/.test(textinput_Feedback)){
+    } else if (
+      typeof textinput_Feedback !== "string" ||
+      !/^[a-zA-Z\s]+$/.test(textinput_Feedback)
+    ) {
       alert(
         "Please enter a valid feedback. Only letters and spaces are allowed."
       );
-    }
-    
-    else if (ratings === null || ratings < 1 || ratings > 5) {
+    } else if (ratings === null || ratings < 1 || ratings > 5) {
       //alert("Please enter a ratings");
       alert("Please enter a valid rating.");
       setIsButtonDisabled(true);
@@ -952,7 +969,7 @@ export default function OrderModule({}) {
                   style={{
                     marginTop: 2,
                     height: responsiveHeight(15),
-                   // backgroundColor: "red",
+                    // backgroundColor: "red",
                   }}
                 >
                   <Text
@@ -1281,33 +1298,49 @@ export default function OrderModule({}) {
                     style={{
                       flex: 1,
                       justifyContent: "center",
-                       //backgroundColor: "red",
+                      //backgroundColor: "red",
                     }}
                   >
                     <TouchableOpacity
                       onPress={() => {
-                        handleViewDriverLocation(item.driverId, item.orderID);
+                        handleViewDriverLocation(
+                          item.driverId,
+                          item.orderID,
+                          item.order_OrderStatus
+                        );
                       }}
-                      disabled={!item.driverId || item.order_OrderStatus==="Delivered" }
+
+                      disabled={
+                        !item.driverId ||
+                        item.order_OrderStatus === "Delivered" ||
+                        item.order_OrderStatus === "Payment Received"
+                      }
                     >
                       <View
                         style={{
-                          backgroundColor: item.driverId ? "#73a9c2" : (item.order_OrderStatus === "Delivered" ? "gray" : "#73a9c2"),
+                          backgroundColor:
+                            item.order_OrderStatus === "Delivered" ||
+                            item.order_OrderStatus === "Payment Received" ||
+                            item.order_OrderStatus === "Pending"
+                              ? "gray"
+                              : item.order_OrderStatus === "Accepted"
+                              ? "#73a9c2"
+                              : "#73a9c2",
+
                           padding: 6,
                           width: responsiveWidth(33),
-                          //  width: 130,
+
                           marginLeft: 0,
                           borderRadius: 5,
-                         // marginTop: 5,
-
                         }}
                       >
                         <Text
                           style={{
                             fontSize: 15,
                             fontFamily: "nunito-semibold",
+
                             color: "black",
-                            marginLeft:5
+                            marginLeft: 5,
                           }}
                         >
                           Driver's Location
@@ -1327,6 +1360,7 @@ export default function OrderModule({}) {
                     <View
                       style={{
                         //backgroundColor: "green",
+
                         marginTop: 15,
                         height: 25,
                         borderRadius: 5,
@@ -1451,7 +1485,7 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     padding: 3,
 
-     marginTop: 30,
+    marginTop: 30,
     bottom: 30,
     //  width: "100%",
     width: responsiveWidth(95),

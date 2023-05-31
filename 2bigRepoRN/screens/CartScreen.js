@@ -1296,7 +1296,7 @@ minDate.setHours(0, 0, 0, 0);
           createOrder(customerData.cusId, url);
           setShowModal_ModeOfPayment(false);
           ToastAndroid.show(
-            "INSIDE THE UPLOAD IMAGE FUNCTION-->Order successfully. Thank you for ordering" +
+            "Order successfully. Thank you for ordering" +
               " " +
               passedStationName +
               ".",

@@ -25,7 +25,9 @@ import { NotificationContext } from "../shared/NotificationContext";
 import Toast from 'react-native-toast-message';
 export default function NotificationScreen() {
   const [notifications, setNotifications] = useState([]);
-  console.log("Notification:", notifications);
+
+ // console.log("NOTIFICATIONS:", notifications);
+
   const [readNotifications, setReadNotifications] = useState([]);
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -85,6 +87,10 @@ export default function NotificationScreen() {
               console.log("SCHED:", scheduledNotifications);
               displayScheduledNotificationsAsToasts(scheduledNotifications);
               
+
+
+              showScheduledNotification(matchedScheduledNotification);
+              //console.log("SCHED NOTIFICATION:", matchedScheduledNotification);
 
             }
           },
@@ -226,32 +232,23 @@ export default function NotificationScreen() {
         </View>
         <View style={{ marginLeft: 220 }}>
           <TouchableOpacity onPress={handleClickMarkAll}>
-            <Text style={styles.text3}> Mark all as read</Text>
-          </TouchableOpacity>
-        </View>
-        {notifications
-          .filter((notification) => notification.title !== "Order Reminder") // Filter out the scheduled notifications
-          .sort(
-            (a, b) =>
-              new Date(b.notificationDate) - new Date(a.notificationDate)
-          )
-          .map((notification) => (
-            <View
-              key={notification.id}
-              style={[
-                styles.notification,readNotifications.includes(notification) &&
-                readNotifications.includes(notification) && styles.readNotification,
 
-              ]}
-            >
-              <TouchableOpacity
-                onPress={
-                  notification.status === "read"
-                    ? () => {}
-                    : () => handleNotificationPress(notification)
-                }
-              >
-                <Text
+                  <Text style={styles.text3}> Mark all as read</Text>
+                </TouchableOpacity>
+          </View>
+          {[...notifications]
+          .sort((a, b) => {
+            const dateA = a.scheduledSent !== "0001-01-01T00:00:00" ? new Date(a.scheduledSent) : new Date(a.notificationDate);
+            const dateB = b.scheduledSent !== "0001-01-01T00:00:00" ? new Date(b.scheduledSent) : new Date(b.notificationDate);
+            return dateB - dateA;
+          })
+          .map((notification) => {
+          //  console.log("line 583",notification); // Console log each sorted notification
+            return (
+                <View
+                  key={notification.notificationID}
+
+          
                   style={[
                     styles.text,
                     notification.status === "unread" && styles.unreadText,
