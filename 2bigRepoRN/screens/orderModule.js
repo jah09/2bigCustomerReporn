@@ -42,10 +42,16 @@ export default function OrderModule({}) {
   const [deviceHeight, setdeviceHeight] = useState();
   const [deviceWidth, setdeviceWidth] = useState();
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 =======
   
 >>>>>>> da8fe06dc7c118bbe6cf390889d3d4ee332cc8ea
+=======
+
+
+
+>>>>>>> c940adba7a54c0d255201bb61b7d4a4b0d6d3e29
   useEffect(() => {
     const deviceHeight = Dimensions.get("window").height;
     const deviceWidth = Dimensions.get("window").width;
@@ -1312,6 +1318,10 @@ export default function OrderModule({}) {
                         );
                       }}
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+
+>>>>>>> c940adba7a54c0d255201bb61b7d4a4b0d6d3e29
                       disabled={
                         !item.driverId ||
                         item.order_OrderStatus === "Delivered" ||
@@ -1328,6 +1338,7 @@ export default function OrderModule({}) {
                               : item.order_OrderStatus === "Accepted"
                               ? "#73a9c2"
                               : "#73a9c2",
+<<<<<<< HEAD
 =======
                       disabled={!item.driverId || item.order_OrderStatus==="Delivered" }
                     >
@@ -1335,6 +1346,9 @@ export default function OrderModule({}) {
                         style={{
                           backgroundColor: item.driverId ? "#73a9c2" : (item.order_OrderStatus === "Delivered" ? "gray" : "#73a9c2"),
 >>>>>>> da8fe06dc7c118bbe6cf390889d3d4ee332cc8ea
+=======
+
+>>>>>>> c940adba7a54c0d255201bb61b7d4a4b0d6d3e29
                           padding: 6,
                           width: responsiveWidth(33),
 
