@@ -42,6 +42,8 @@ export default function OrderModule({}) {
   const [deviceHeight, setdeviceHeight] = useState();
   const [deviceWidth, setdeviceWidth] = useState();
 
+
+
   useEffect(() => {
     const deviceHeight = Dimensions.get("window").height;
     const deviceWidth = Dimensions.get("window").width;
@@ -1307,6 +1309,7 @@ export default function OrderModule({}) {
                           item.order_OrderStatus
                         );
                       }}
+
                       disabled={
                         !item.driverId ||
                         item.order_OrderStatus === "Delivered" ||
@@ -1323,6 +1326,7 @@ export default function OrderModule({}) {
                               : item.order_OrderStatus === "Accepted"
                               ? "#73a9c2"
                               : "#73a9c2",
+
                           padding: 6,
                           width: responsiveWidth(33),
 
