@@ -29,7 +29,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { GOOGLE_API_KEY_GEOLOCATION } from "../APIKEY";
 //export const mapRef=React.createRef();
-export default function MapModule({}) {
+export default function MapForDelivery() {
   useEffect(() => {
     Geocoder.init(GOOGLE_API_KEY_GEOLOCATION);
   }, []);
@@ -37,86 +37,17 @@ export default function MapModule({}) {
   const navigation = useNavigation();
   const route = useRoute();
   const isFocused = useIsFocused();
-  // const driverLatLong = route.params?.driverLatLong;
-  // const displayPolyline = route.params?.displayPolyline;
-
+  const driverLatLong = route.params?.driverLatLong;
+  const displayPolyline = route.params?.displayPolyline;
+  const newDeliveryAddress_Latlong =route.params?.newDeliveryAddress_Latlong;
+  const orderId=route.params?.orderId;
+  console.log("Map delivery screen",newDeliveryAddress_Latlong,orderId)
   const [selectedPlace, setSelectedPlace] = useState(null);
   const { width, height } = Dimensions.get("window");
+
   const aspect_ratio = width / height;
   const LATTITUDE_DELTA = 0.005;
   const LONGITUDE_DELTA = LATTITUDE_DELTA * aspect_ratio;
-
-  //cebu city bounds
-  function isStoreWithinCebuCityBounds(lat, long) {
-    const cebuCityBounds = {
-      south: 10.259524,
-      north: 10.372442,
-      west: 123.775514,
-      east: 123.977813,
-    };
-
-    if (
-      lat >= cebuCityBounds.south &&
-      lat <= cebuCityBounds.north &&
-      long >= cebuCityBounds.west &&
-      long <= cebuCityBounds.east
-    ) {
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  //original codes
-  // useLayoutEffect(() => {
-  //   const starCountRef = ref(db, "ADMIN/");
-  //   onValue(starCountRef, (snapshot) => {
-  //     // const storePic=snapshot.val();
-  //     const data = snapshot.val();
-  //     //  console.log("to pass data test",data);
-  //     AsyncStorage.setItem("AdminData", JSON.stringify(data)); //pass data of ADMIN to "AdminData" so that other screen can access it globally
-  //     const newStoreInfo = Object.keys(data).map((key) => ({
-  //       id: key,
-  //       StoreImage: data[key].StoreImage,
-  //       ...data[key],
-  //     }));
-
-  //     // console.log('MAP SCREEN- DATA FROM ADMIN COLLECTION RECEIVED',newStoreInfo); //test if successfully fetch the datas in STOREINFORMATION
-
-  //     setstoreInformation(newStoreInfo);
-  //   });
-  // }, []);
-
-  //new codes that filtered those station nga wala sa cebu city
-  useLayoutEffect(() => {
-    const starCountRef = ref(db, "ADMIN/"); //ref of the database
-  //  console.log("Test", starCountRef);
-    if (starCountRef === null) {
-      console.log("No admin data available yet");
-    } else {
-      onValue(starCountRef, (snapshot) => {
-        const data = snapshot.val();
-        if (data && Object.keys(data).length > 0) {
-          const newStoreInfo = Object.keys(data)
-            .map((key) => ({
-              id: key,
-              StoreImage: data[key].StoreImage,
-              ...data[key],
-            }))
-            .filter((store) =>
-              isStoreWithinCebuCityBounds(
-                store && store?.RefillingStation?.addLattitude,
-                store && store?.RefillingStation?.addLongitude
-              )
-            );
-          // console.log("line 102",newStoreInfo)
-
-          AsyncStorage.setItem("AdminData", JSON.stringify(newStoreInfo)); //pass data of ADMIN to "AdminData" so that other screen can access it globally
-          setstoreInformation(newStoreInfo);
-        }
-      });
-    }
-  }, []);
 
   const [title, setTitle] = useState();
 
@@ -133,27 +64,28 @@ export default function MapModule({}) {
   const [polylineCoords, setPolylineCoords] = useState([]);
   const [polylineCoordsStoreToCustomer, setpolylineCoordsStoreToCustomer] =
     useState([]);
-
+  const [origin, setOrigin] = useState();
+  const [destination, setDestination] = useState();
 
   //listen if switch tabs
 
   //get the location of customer and driver
-  // useEffect(() => {
-  //   if (displayPolyline && driverLatLong) {
-  //     const polyLineCoords = [
-  //       {
-  //         latitude: location?.coords.latitude || 0,
-  //         longitude: location?.coords.longitude || 0,
-  //       },
-  //       {
-  //         latitude: driverLatLong?.driverLatt || null,
-  //         longitude: driverLatLong?.driverLong || null,
-  //       },
-  //     ];
-  //     console.log("inside this 67", polyLineCoords);
-  //     setPolylineCoords(polyLineCoords);
-  //   }
-  // }, [location, driverLatLong, displayPolyline]);
+  useEffect(() => {
+    if (displayPolyline && driverLatLong) {
+      const polyLineCoords = [
+        {
+          latitude: location?.coords.latitude || 0,
+          longitude: location?.coords.longitude || 0,
+        },
+        {
+          latitude: driverLatLong?.driverLatt || null,
+          longitude: driverLatLong?.driverLong || null,
+        },
+      ];
+      console.log("inside this 67", polyLineCoords);
+      setPolylineCoords(polyLineCoords);
+    }
+  }, [location, driverLatLong, displayPolyline]);
 
   // useLayoutEffect(() => {
   //   if (displayPolyline) {
@@ -229,7 +161,7 @@ export default function MapModule({}) {
       }
       let location = await Location.getCurrentPositionAsync({});
       if (isMounted) {
-        console.log("User current location", location);
+        console.log("User current location--->Map for Delivery", location);
 
         setLocation(location);
         setMarkerPosition({
@@ -285,33 +217,8 @@ export default function MapModule({}) {
     // };
   }, [prevLocation]);
 
-  const handleMarkerPress = (place) => {
-    setSelectedPlace(place);
-  };
 
-  const handleStoreMarkerPress = (item, location) => {
-    // console.log("line 147", location);
-    //addLongitude
-    const polylineCoordinates = [
-      {
-        latitude: location?.coords.latitude || 0,
-        longitude: location?.coords.longitude || 0,
-      },
-      {
-        latitude: item?.RefillingStation.addLattitude || 0,
-        longitude: item?.RefillingStation.addLongitude || 0,
-      },
-    ];
-    if (location && location.coords) {
-      polylineCoordinates.push({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
-    }
-    setpolylineCoordsStoreToCustomer(polylineCoordinates);
-    console.log("line 312",polylineCoordinates)
-    setSelectedStore(item);
-  };
+
   //get customer data
   const [customerData, setCustomerData] = useState();
   const customerID = customerData?.cusId;
@@ -354,13 +261,6 @@ export default function MapModule({}) {
       });
   }, [customerID, location, title]);
 
-  const CustomCallout = ({ title }) => {
-    return (
-      <View style={styles.calloutContainer}>
-        <Text style={styles.calloutTitle}>{title}</Text>
-      </View>
-    );
-  };
   return (
     <View style={styles.container}>
       {location && (
@@ -372,6 +272,9 @@ export default function MapModule({}) {
           initialRegion={{
             latitude: location.coords.latitude,
             longitude: location.coords.longitude,
+            //latitudeDelta: LATTITUDE_DELTA,
+
+            //longitudeDelta: LONGITUDE_DELTA,
             latitudeDelta: 0.00922,
             longitudeDelta: 0.00421,
           }}
@@ -380,7 +283,7 @@ export default function MapModule({}) {
           showsMyLocationButton={true}
           showsBuildings={true}
           zoomEnabled={true}
-          showsTraffic={true}
+          showsTraffic={false}
           showsCompass={true}
           showsIndoors={true}
           loadingEnabled={true}
@@ -397,113 +300,70 @@ export default function MapModule({}) {
               tooltip: true,
               stopPropagation: true,
             }}
+            // coordinate={{
+            //   latitude: location.coords.latitude,
+            //   longitude: location.coords.longitude,
+            // }}
             coordinate={markerPosition}
             showCallout={true}
             title={title}
           >
             {/* <CustomCallout title={title} /> */}
           </Marker>
-
-          {/* {storeInformation.map((item) => (
-          
+          {newDeliveryAddress_Latlong && newDeliveryAddress_Latlong.length > 0 &&
+          newDeliveryAddress_Latlong.map((location, index) => (
             <Marker
-              key={item.id}
+              key={index}
               coordinate={{
-                latitude: item.RefillingStation.addLattitude ?? null,
-                longitude: item.RefillingStation.addLongitude ?? null,
+                latitude: location.latitude,
+                longitude: location.longitude,
               }}
-              description="Test1"
               pinColor={"#87cefa"}
-              onPress={() => handleStoreMarkerPress(item, location)}
-              title={item.RefillingStation.stationName}
-              calloutVisible={true}
-              callout={{
-                tooltip: true,
-                stopPropagation: true,
-              }}
-              zIndex={999}
-              showCallout={true}
             >
-              <Callout
-                tooltip={true}
-                onPress={() => {
-                  console.log("passing from mapscreen", item);
-                  navigation.navigate("toMapsProductScreen", { item });
-                }}
-              >
-                <View style={styles.callout}>
-                  <Text style={styles.calloutText}>
-                    {item.RefillingStation.stationName}
-                  </Text>
-                  <Text style={{ fontSize: 14, fontWeight: "none" }}>
-                    {item.RefillingStation.status}
-                  </Text>
-                </View>
-              </Callout>
-
-             
-            </Marker>
-          ))} */}
-
-          {/* map the store information every admin */}
-          {storeInformation.map((item) => {
-            const idnum = item.idno;
-            const lat = item.RefillingStation.addLattitude ?? null;
-            const long = item.RefillingStation.addLongitude ?? null;
-
-            //console.log("Marker within bounds:",idnum, lat, long); // add this
-            return (
-              <Marker
-                key={item.id}
-                coordinate={{
-                  latitude: lat,
-                  longitude: long,
-                }}
-                description="Test1"
-                pinColor={"#87cefa"}
-                onPress={() => handleStoreMarkerPress(item, location)}
-                title={item.RefillingStation.stationName}
-                calloutVisible={true}
-                callout={{
-                  tooltip: true,
-                  stopPropagation: true,
-                }}
-                zIndex={999}
-                showCallout={true}
-              >
-                <Callout
-                  tooltip={true}
-                  onPress={() => {
-                    console.log("passing from mapscreen", item);
-                    navigation.navigate("toMapsProductScreen", { item });
-                  }}
-                >
-                  <View style={styles.callout}>
-                    <Text style={styles.calloutText}>
-                      {item.RefillingStation.stationName}
-                    </Text>
-                    <Text style={{ fontSize: 14, fontWeight: "none" }}>
-                      {item.RefillingStation.status}
-                    </Text>
-                  </View>
+                <Callout onPress={()=>{
+                    navigation.navigate("Orders");
+                }}>
+                    <Text>Order ID: {orderId}</Text>
                 </Callout>
+            </Marker>
+          ))}
+          {/* {newDeliveryAddress_Latlong.map((location, index) => (
+          <Marker
+            key={index}
+            coordinate={{
+              latitude: location.latitude,
+              longitude: location.longitude,
+            }}
+            pinColor={"#87cefa"} // Set the pin color to blue
+          />
+        ))} */}
 
-                {/* <MaterialCommunityIcons name="storefront" size={24} color="black" /> */}
-              </Marker>
-            );
-          })}
-          {/* {polylineCoordsStoreToCustomer && (
+          {polylineCoords.length > 0 && (
             <MapViewDirections
-            
-              origin={polylineCoordsStoreToCustomer[0]}
-              destination={polylineCoordsStoreToCustomer[1]}
-              strokeWidth={5}
-              //waypoints={polylineCoordsStoreToCustomer.slice(2, -1)}
+              origin={polylineCoords[0]}
+              destination={polylineCoords[1]}
+              strokeWidth={3}
               strokeColor="red"
               apikey={GOOGLE_API_KEY}
             />
-          )} */}
-         
+          )}
+
+          {/* view the polyline/ route of the driver on going to customer location */}
+          {driverLatLong && (
+            
+            <Marker
+              coordinate={{
+                latitude: driverLatLong.driverLatt,
+                longitude: driverLatLong.driverLong,
+              }}
+              title="Driver Location"
+              description="Driver is here"
+
+              // image={}
+            >
+              <FontAwesome name="motorcycle" size={21} color="yellow" />
+            </Marker>
+          )}
         </MapView>
       )}
     </View>

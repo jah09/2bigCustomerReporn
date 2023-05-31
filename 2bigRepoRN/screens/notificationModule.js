@@ -377,7 +377,7 @@ import { NotificationContext } from "../shared/NotificationContext";
 
 export default function NotificationScreen() {
   const [notifications, setNotifications] = useState([]);
-  console.log("NOTIFICATIONS:", notifications);
+ // console.log("NOTIFICATIONS:", notifications);
   const [readNotifications, setReadNotifications] = useState([]);
   const [currentTime, setCurrentTime] = useState(new Date());
   const { unreadCount, updateUnreadCount } = useContext(NotificationContext);
@@ -454,7 +454,7 @@ export default function NotificationScreen() {
               });
 
               showScheduledNotification(matchedScheduledNotification);
-              console.log("SCHED NOTIFICATION:", matchedScheduledNotification);
+              //console.log("SCHED NOTIFICATION:", matchedScheduledNotification);
             }
           },
           (error) => {
@@ -580,7 +580,7 @@ const handleClickMarkAll = async () => {
             return dateB - dateA;
           })
           .map((notification) => {
-            console.log("line 583",notification); // Console log each sorted notification
+          //  console.log("line 583",notification); // Console log each sorted notification
             return (
                 <View
                   key={notification.notificationID}
