@@ -3338,8 +3338,7 @@ const styles = StyleSheet.create({
   storeStatusStyles: {
     fontSize: 16,
     fontFamily: "nunito-light",
-  },
-
+  },  
   storeNameStyles: {
     fontSize: 20,
     fontFamily: "nunito-bold",
@@ -3459,3 +3458,5 @@ const styles = StyleSheet.create({
     // backgroundColor:'blue'
   },
 });
+
+

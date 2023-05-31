@@ -83,7 +83,9 @@ export default function LoginModule({ navigation, route }) {
 
   const [currentDate, setCurrentDate] = useState("");
 
+
   const handleLogin = async () => {
+
     try {
       const auth = getAuth();
       const inputtedpassword = SHA256(password).toString();

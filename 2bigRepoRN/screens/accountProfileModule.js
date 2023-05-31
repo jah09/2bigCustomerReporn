@@ -246,6 +246,7 @@ export default function AccountProfileModule({ navigation }) {
                   color="#DFD8C8"
                   style={styles.editIcon}
                 />
+
               </TouchableOpacity>
             </>
           ) : (
