@@ -2,27 +2,20 @@ import {
   StyleSheet,
   Text,
   View,
+  FlatList,
   TouchableOpacity,
-  Alert,
   Modal,
   TextInput,
-  FlatList,
   ToastAndroid,
-  Image,
-  Dimensions,
 } from "react-native";
-import {
-  responsiveHeight,
-  responsiveWidth,
-} from "react-native-responsive-dimensions";
-import { AntDesign } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
 import React, { useState, useEffect, useLayoutEffect } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { useRoute } from "@react-navigation/native";
-import { globalStyles } from "../ForStyle/GlobalStyles";
 import { db } from "../firebaseConfig";
+import { AntDesign } from "@expo/vector-icons";
+import { globalStyles } from "../ForStyle/GlobalStyles";
 import {
   ref,
   onValue,
@@ -33,115 +26,22 @@ import {
   update,
   set,
 } from "firebase/database";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ScrollView } from "react-native-web";
+import {
+  responsiveHeight,
+  responsiveWidth,
+} from "react-native-responsive-dimensions";
 import moment from "moment/moment";
-export default function OrderModule({}) {
-  // const deviceHeight = Dimensions.get("window").height;
-  // const deviceWidth = Dimensions.get("window").width;
-  const [deviceHeight, setdeviceHeight] = useState();
-  const [deviceWidth, setdeviceWidth] = useState();
-
-  const onPresshandler_toStationPage = () => {
-    navigation.goBack();
-  };
-  useEffect(() => {
-    const deviceHeight = Dimensions.get("window").height;
-    const deviceWidth = Dimensions.get("window").width;
-    setdeviceWidth(deviceWidth);
-    setdeviceHeight(deviceHeight);
-    // console.log("device height line 40---->", deviceHeight);
-    // console.log("devide width line 41---->", deviceWidth);
-  }, []);
-
+export default function DeliveredOrdersScreen() {
   const styleTypes = ["default", "dark-content", "light-content"];
   const [visibleStatusBar, setvisibleStatusbar] = useState(false);
   const [styleStatusBar, setstyleStatusBar] = useState(styleTypes[0]);
   const navigation = useNavigation();
-  const route = useRoute();
+  const onPresshandler_toStationPage = () => {
+    navigation.goBack();
+  };
   const [customerData, setCustomerData] = useState();
   const [customerId, setCustomerId] = useState(null);
-  // console.log('orderDetails-customerData--',customerData);
   const [orderInfo, setOrderInfo] = useState([]);
-
-  const [showModal, setShowModal] = useState(false);
-  const [selectedItemID, setSelectedItemID] = useState(null);
-  //  console.log("line 54", selectedItemID);
-  const onPressHandlerShowModal = (item) => {
-    //console.log("line 52", item);
-    const { admin_ID, order_StoreName, orderID } = item.item;
-    // console.log("test 49", orderID);
-    setSelectedItemID({ admin_ID, order_StoreName, orderID });
-    setShowModal(true);
-  };
-
-  const [driverData, setDriverData] = useState();
-  const [driverLocation, setDriverLocation] = useState();
-  //console.log("line 52",driverLocation);
-
-  //function nga mo filter if unsa ang GE CLICK NGA DRIVER'S LOCATION, E PASA DIRE ANG ORDER ID NGA GE PRESSED OG ANG DRIVER LOCATION
-  const handleViewDriverLocation = (driverId, orderId) => {
-    const order = orderInfo.find((order) => order.orderID === orderId);
-    if (order) {
-      console.log("inside line 85", orderId);
-      const driverLatLong =
-        driverLocation.find((driver) => driver.driverId === driverId) || null;
-
-      const newDeliveryAddress_Latlong = [];
-      const deliveryOption = order.order_newDeliveryAddressOption;
-      console.log("Order details", deliveryOption);
-      if (driverLatLong) {
-        if (deliveryOption === "New Delivery Address") {
-          const newDeliveryAddressLatLong = {
-            latitude: order.order_newDeliveryAddLattitude,
-            longitude: order.order_newDeliveryAddLongitude,
-          };
-          newDeliveryAddress_Latlong.push(newDeliveryAddressLatLong);
-          console.log("New Delivery add", newDeliveryAddress_Latlong);
-          navigation.navigate("MapScreenforDelivery", {
-            driverLatLong,
-            displayPolyline: true,
-            newDeliveryAddress_Latlong,
-            orderId,
-          });
-        } else {
-          navigation.navigate("MapScreenforDelivery", {
-            driverLatLong,
-            displayPolyline: true,
-            newDeliveryAddress_Latlong: [],
-            orderId,
-          });
-        }
-      } else {
-        console.log("Driver not found with ID", driverId);
-      }
-    } else {
-      console.log("Order not found with ID", orderId);
-    }
-  };
-
-  //get the employee data
-  useLayoutEffect(() => {
-    const empRef = ref(db, "EMPLOYEES/");
-
-    onValue(empRef, (snapshot) => {
-      // const storePic=snapshot.val();
-      const data = snapshot.val();
-      //  console.log("to pass data test",data);
-      if (data && Object.keys(data).length > 0) {
-        const newEmpInfo = Object.keys(data).map((key) => ({
-          id: key,
-
-          ...data[key],
-        }));
-
-        setDriverData(newEmpInfo);
-      }
-
-      //console.log('ORDER SCREEN- DATA FROM EMPLOYEE COLLECTION RECEIVED',newEmpInfo); //test if successfully fetch the datas in STOREINFORMATION
-    });
-  }, []);
-
   //get the customer ID from Async in login screen and extract it and Save to customerID
   useLayoutEffect(() => {
     AsyncStorage.getItem("customerData") //e get ang Asycn sa login screen
@@ -159,6 +59,27 @@ export default function OrderModule({}) {
         alert("Error fetching data: ", error);
       });
   }, []);
+
+  //get the current date
+  useEffect(() => {
+    const functionsetCurrentDate = () => {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, "0");
+      const day = String(today.getDate()).padStart(2, "0");
+      const hours = String(today.getHours()).padStart(2, "0");
+      const minutes = String(today.getMinutes()).padStart(2, "0");
+      const seconds = String(today.getSeconds()).padStart(2, "0");
+      const formattedDate = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+      setCurrentDate(formattedDate);
+
+      return formattedDate;
+    };
+
+    functionsetCurrentDate();
+  }, []);
+
+  const [currentDate, setCurrentDate] = useState("");
 
   //get the ORDER COLLECTION and filtered it, as requirement needed
   useLayoutEffect(() => {
@@ -185,21 +106,16 @@ export default function OrderModule({}) {
               // console.log("line 95", data);
               const filteredOrderData = OrderInformation.filter(
                 (order) =>
-                  order.order_OrderStatus === "Accepted" ||
-                  order.order_OrderStatus === "Out for Delivery" ||
-                  order.order_OrderStatus === "Pending" 
-               
+                  order.order_OrderStatus === "Delivered" ||
+                  order.order_OrderStatus === "Payment Received"
               );
-               // Sort the orders based on the latest order date and time
-            filteredOrderData.sort((a, b) => {
-              const dateA = moment(a.orderDate, "YYYY-MM-DDTHH:mm:ss.SSSSSSSZ");
-              //console.log("line 196",dateA);
-              const dateB = moment(b.orderDate, "YYYY-MM-DDTHH:mm:ss.SSSSSSSZ");
-             // console.log("line 198",dateB);
-              return dateB.diff(dateA);
+              filteredOrderData.sort((a, b) => {
+                const dateA = moment(a.orderDate, "YYYY-MM-DDTHH:mm:ss.SSSSSSSZ");
+                //console.log("line 196",dateA);
+                const dateB = moment(b.orderDate, "YYYY-MM-DDTHH:mm:ss.SSSSSSSZ");
+               // console.log("line 198",dateB);
+                return dateB.diff(dateA);
             });
-         //   console.log("Sorted Order Data:", filteredOrderData);
-
               filteredOrderData.forEach((order) => {
                 const products = order.order_Products.map((product) => ({
                   productId: product.order_ProductId,
@@ -216,28 +132,9 @@ export default function OrderModule({}) {
                 // });
 
                 //if the order status is Delivered or payment received then move to another screen
-           
               });
-              //console.log("Extracted data", JSON.stringify(filteredOrderData));
 
-              const empLatlong = filteredOrderData.map((order) => {
-                const emp =
-                  (driverData || []).find(
-                    (emp) => emp.emp_id === order.driverId
-                  ) || null;
-                if (emp) {
-                  return {
-                    ...order,
-                    driverLatt: emp.latitude,
-                    driverLong: emp.longitude,
-                  };
-                } else {
-                  return order;
-                }
-              });
-              // console.log("line 164",empLatlong);
-              setDriverLocation(empLatlong);
-              // console.log("line 146", JSON.stringify(filteredOrderData));
+              //  console.log("line 146", JSON.stringify(filteredOrderData));
               setOrderInfo(filteredOrderData);
             }
           } else {
@@ -251,66 +148,19 @@ export default function OrderModule({}) {
         }
       );
     }
-  }, [customerId, driverData]);
+  }, [customerId]);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedItemID, setSelectedItemID] = useState(null);
 
-
-  //insert review and ratings for the store
-  const [textinput_Feedback, setTextInput_Feedback] = useState();
-  // console.log("text",textinput_Feedback);
-  const [ratings, setRatings] = useState();
-  // console.log("arte",ratings);
-  const [isButtonDisabled, setIsButtonDisabled] = useState(true);
-
-  //function to check if the feedback input and rating is having a data.
-  const handleSubmit = () => {
-    if (textinput_Feedback === null || textinput_Feedback.length > 25) {
-      // ToastAndroid.show(
-      //   "Please enter a feedback or review with at least 20 characters",
-      //   ToastAndroid.LONG
-      // );
-      alert("Please enter a feedback or review with at least 20 characters");
-      setIsButtonDisabled(true);
-    } else if (
-      typeof textinput_Feedback !== "string" ||
-      !/^[a-zA-Z\s]+$/.test(textinput_Feedback)
-    ) {
-      alert(
-        "Please enter a valid feedback. Only letters and spaces are allowed."
-      );
-    } else if (ratings === null || ratings < 1 || ratings > 5) {
-      //alert("Please enter a ratings");
-      alert("Please enter a valid rating.");
-      setIsButtonDisabled(true);
-    } else {
-      console.log("this line", customerData.cusId);
-      createReview(customerData.cusId);
-      setShowModal(false);
-      setIsButtonDisabled(false);
-    }
-    //  console.log("this line",customerData.cusId)
+  const onPressHandlerShowModal = (item) => {
+    //console.log("line 52", item);
+    const { admin_ID, order_StoreName, orderID } = item.item;
+    // console.log("test 49", orderID);
+    setSelectedItemID({ admin_ID, order_StoreName, orderID });
+    setShowModal(true);
   };
 
-  //get the current date
-  useEffect(() => {
-    const functionsetCurrentDate = () => {
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = String(today.getMonth() + 1).padStart(2, "0");
-      const day = String(today.getDate()).padStart(2, "0");
-      const hours = String(today.getHours()).padStart(2, "0");
-      const minutes = String(today.getMinutes()).padStart(2, "0");
-      const seconds = String(today.getSeconds()).padStart(2, "0");
-      const formattedDate = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-      setCurrentDate(formattedDate);
-
-      return formattedDate;
-    };
-
-    functionsetCurrentDate();
-  }, []);
-
-  const [currentDate, setCurrentDate] = useState("");
-  //create review for the station
+  //write ratings and review to the store
   const createReview = (customerId) => {
     const RandomId = Math.floor(Math.random() * 50000) + 10000;
     //const newOrderRef = push(ref(db, "Orders"));
@@ -395,12 +245,200 @@ export default function OrderModule({}) {
         alert("Error", JSON.stringify(error), "OK");
       });
   };
-
+  //insert review and ratings for the store
+  const [textinput_Feedback, setTextInput_Feedback] = useState();
+  // console.log("text",textinput_Feedback);
+  const [ratings, setRatings] = useState("");
+  // console.log("arte",ratings);
+  const [isButtonDisabled, setIsButtonDisabled] = useState(true);
+  const handleSubmit = () => {
+    if (textinput_Feedback === null || textinput_Feedback.length > 25) {
+      // ToastAndroid.show(
+      //   "Please enter a feedback or review with at least 20 characters",
+      //   ToastAndroid.LONG
+      // );
+      alert("Please enter a feedback or review with at least 20 characters");
+      setIsButtonDisabled(true);
+    } else if (
+      typeof textinput_Feedback !== "string" ||
+      !/^[a-zA-Z\s]+$/.test(textinput_Feedback)
+    ) {
+      alert(
+        "Please enter a valid feedback. Only letters and spaces are allowed."
+      );
+    } else if (ratings === null || ratings < 1 || ratings > 5) {
+      //alert("Please enter a ratings");
+      alert("Please enter a valid rating. Only 1-5.");
+      setIsButtonDisabled(true);
+    } else {
+      console.log("this line", customerData.cusId);
+      createReview(customerData.cusId);
+      setShowModal(false);
+      setIsButtonDisabled(false);
+    }
+    //  console.log("this line",customerData.cusId)
+  };
   return (
-    // <ScrollView contentContainerStyle={{flexGrow:1}}
     <View style={styles.container}>
-    
+      {selectedItemID && (
+        <Modal
+          transparent
+          onRequestClose={() => {
+            setShowModal(false);
+          }}
+          visible={showModal}
+        >
+          <View
+            style={{
+              flex: 1,
+              justifyContent: "center",
+              alignItems: "center",
+              backgroundColor: "#00000099",
+            }}
+          >
+            <View style={styles.FeedbackModal}>
+              <View style={styles.modalTitle}>
+                <Text
+                  style={{
+                    marginTop: 8,
+                    marginLeft: 20,
+                    fontFamily: "nunito-bold",
+                    fontSize: 18,
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  {selectedItemID.order_StoreName}
+                </Text>
 
+                <View style={{ flex: 1, marginTop: 2 }} />
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowModal(false);
+                  }}
+                >
+                  <AntDesign
+                    name="close"
+                    size={20}
+                    color="black"
+                    style={{ marginTop: 5 }}
+                  />
+                </TouchableOpacity>
+
+                <View
+                  style={{
+                    backgroundColor: "red",
+                    textAlign: "right",
+                    //  right: -80,
+                    // marginTop: -10,
+                  }}
+                >
+                  {/* <TouchableOpacity
+                    onPress={() => {
+                      setShowModal(false);
+                    }}
+                  >
+                    <MaterialCommunityIcons
+                      name="close-circle"
+                      size={28}
+                      color="black"
+                    />
+                  </TouchableOpacity> */}
+                </View>
+              </View>
+
+              <View style={styles.inputwrapper}>
+                <View style={styles.reviewInputStyle}>
+                  <MaterialIcons
+                    name="rate-review"
+                    size={23}
+                    color="black"
+                    style={[globalStyles.login_Email_Icon, { marginTop: 5 }]}
+                  />
+
+                  <TextInput
+                    placeholder="Enter your feedback or review"
+                    multiline={true}
+                    placeholderTextColor="black"
+                    style={globalStyles.login_Email_textInput}
+                    keyboardType="default"
+                    onChangeText={(text) => setTextInput_Feedback(text)}
+                  />
+                </View>
+                <StatusBar
+                  backgroundColor="black"
+                  styleStatusBar={styleStatusBar}
+                />
+
+                <View style={styles.ratingsInputStyle}>
+                  <MaterialIcons
+                    name="star"
+                    size={23}
+                    color="black"
+                    style={[globalStyles.login_Email_Icon, { marginTop: 2 }]}
+                  />
+
+                  <TextInput
+                    placeholder="Ratings(1-5)"
+                    multiline={true}
+                    placeholderTextColor="black"
+                    style={globalStyles.login_Email_textInput}
+                    keyboardType="default"
+                    onChangeText={(text) => setRatings(text.replace(/[^0-9]/g,''))}
+                    value={ratings}
+                  />
+                </View>
+              </View>
+
+              <View
+                style={{
+                  backgroundColor: "transparent",
+                  marginTop: 20,
+                  height: 50,
+                }}
+              >
+                <TouchableOpacity
+                  onPress={handleSubmit}
+                  disabled={!textinput_Feedback || !ratings}
+                >
+                  <View
+                    style={{
+                      borderRadius: 10,
+                      paddingVertical: 10,
+                      paddingHorizontal: 10,
+                      //backgroundColor: "#87cefa",
+                      backgroundColor:
+                        !textinput_Feedback || !ratings ? "#ccc" : "#87cefa",
+                      marginTop: 5,
+                      width: 200,
+                      left: 50,
+                      height: 40,
+                    }}
+                  >
+                    <Text
+                      style={[
+                        globalStyles.buttonText,
+                        { marginTop: 0, left: 0 },
+                      ]}
+                    >
+                      Submit
+                    </Text>
+                    <MaterialIcons
+                      name="login"
+                      size={24}
+                      color="black"
+                      style={[
+                        globalStyles.loginIcon,
+                        { backgroundColor: "transparent", marginLeft: -70 },
+                      ]}
+                    />
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
       <FlatList
         keyExtractor={(item) => item.id}
         data={orderInfo}
@@ -1140,61 +1178,7 @@ export default function OrderModule({}) {
                     top: 3,
                   }}
                 >
-                  <View
-                    style={{
-                      flex: 1,
-                      justifyContent: "center",
-                      //backgroundColor: "red",
-                    }}
-                  >
-                    <TouchableOpacity
-                      onPress={() => {
-                        handleViewDriverLocation(
-                          item.driverId,
-                          item.orderID,
-                          item.order_OrderStatus
-                        );
-                      }}
-                      disabled={
-                        !item.driverId ||
-                        item.order_OrderStatus === "Delivered" ||
-                        item.order_OrderStatus === "Payment Received"
-                      }
-                    >
-                      <View
-                        style={{
-                          backgroundColor:
-                            item.order_OrderStatus === "Delivered" ||
-                            item.order_OrderStatus === "Payment Received" ||
-                            item.order_OrderStatus === "Pending"
-                              ? "gray"
-                              : item.order_OrderStatus === "Accepted"
-                              ? "#73a9c2"
-                              : "#73a9c2",
-
-                          padding: 6,
-                          width: responsiveWidth(33),
-
-                          marginLeft: 0,
-                          borderRadius: 5,
-                        }}
-                      >
-                        <Text
-                          style={{
-                            fontSize: 15,
-                            fontFamily: "nunito-semibold",
-
-                            color: "black",
-                            marginLeft: 5,
-                          }}
-                        >
-                          Driver's Location
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* <TouchableOpacity
+                  <TouchableOpacity
                     onPress={() => onPressHandlerShowModal({ item: item })}
                     disabled={
                       item.order_OrderStatus === "Pending" ||
@@ -1222,7 +1206,7 @@ export default function OrderModule({}) {
                     >
                       <MaterialIcons name="feedback" size={24} color="black" />
                     </View>
-                  </TouchableOpacity> */}
+                  </TouchableOpacity>
                 </View>
               </View>
             </View>
@@ -1230,26 +1214,15 @@ export default function OrderModule({}) {
         )}
         ListHeaderComponent={
           <View style={styles.viewBackBtn}>
+            <MaterialIcons
+              name="arrow-back-ios"
+              size={24}
+              color="black"
+              onPress={onPresshandler_toStationPage}
+            />
             <Text style={[styles.textwatername, { marginRight: "auto" }]}>
-              Order Details
+              Delivered orders
             </Text>
-
-            <TouchableOpacity
-              onPress={() => {
-                navigation.navigate("DeliveredOrdersScreen");
-                //console.log("sending order Details",orderInfo)
-              }}
-            >
-              <Image
-                style={{ right: 10, width: 25, height: 25 }}
-                source={require("../assets/orderReceivednoBG.png")}
-              />
-              {/* <View>
-              <Text>
-                Delivered
-              </Text>
-              </View> */}
-            </TouchableOpacity>
           </View>
         }
       />
@@ -1258,99 +1231,6 @@ export default function OrderModule({}) {
 }
 
 const styles = StyleSheet.create({
-  viewProducts: {
-    backgroundColor: "white",
-    padding: 3,
-    marginBottom: 0,
-    width: responsiveWidth(40),
-    height: responsiveHeight(12),
-    //marginLeft: 5,
-    borderRadius: 5,
-    marginRight: 5,
-    shadowColor: "black",
-    shadowRadius: 5,
-    shadowOffset: {
-      height: 5,
-      width: 5,
-    },
-    elevation: 4,
-    // top:10
-  },
-  container: {
-    flex: 1,
-    backgroundColor: "lightcyan",
-    // justifyContent:'center',
-    //alignItems:'center'
-  },
-  viewBackBtn: {
-    // backgroundColor: "orange",
-    marginTop: 10,
-    // top:Constants.statusBarHeight ,
-    marginLeft: 15,
-    // width: "100%",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  productWrapper: {
-    //backgroundColor: "yellowgreen",
-    padding: 10,
-    // flex: 1,
-    //height: 550,
-    // height: 600,
-    height: responsiveHeight(89),
-    marginTop: 10,
-  },
-  viewwatername: {
-    // backgroundColor: "yellow",
-
-    width: 150,
-    marginHorizontal: 120,
-  },
-  textwatername: {
-    fontSize: 20,
-    flex: 1,
-    fontFamily: "nunito-bold",
-    fontWeight: "bold",
-    textAlign: "center",
-    marginLeft: 10,
-  },
-  wrapperWaterProduct: {
-    // backgroundColor: "blue",
-
-    // marginBottom: 5,
-    flex: 1,
-  },
-
-  viewWaterItem: {
-    backgroundColor: "white",
-    padding: 3,
-
-    marginTop: 30,
-    bottom: 30,
-    //  width: "100%",
-    width: responsiveWidth(95),
-    //width: Dimensions.get("window").width - 20,
-    //height: 560,
-    //height: Dimensions.get("window").height/2 + 250,
-    height: responsiveHeight(88),
-    marginLeft: 0,
-    borderRadius: 10,
-    marginRight: 5,
-    shadowColor: "black",
-    shadowRadius: 5,
-    shadowOffset: {
-      height: 5,
-      width: 5,
-    },
-    elevation: 7,
-  },
-  productNameStyle: {
-    fontSize: 20,
-    fontFamily: "nunito-semibold",
-    marginLeft: 0,
-    textAlign: "center",
-  },
   FeedbackModal: {
     width: 300,
     height: 250,
@@ -1395,112 +1275,92 @@ const styles = StyleSheet.create({
     marginLeft: 20,
   },
 
-  //station screen styles
+  viewProducts: {
+    backgroundColor: "white",
+    padding: 3,
+    marginBottom: 0,
+    width: responsiveWidth(40),
+    height: responsiveHeight(12),
+    //marginLeft: 5,
+    borderRadius: 5,
+    marginRight: 5,
+    shadowColor: "black",
+    shadowRadius: 5,
+    shadowOffset: {
+      height: 5,
+      width: 5,
+    },
+    elevation: 4,
+    // top:10
+  },
+  productNameStyle: {
+    fontSize: 20,
+    fontFamily: "nunito-semibold",
+    marginLeft: 0,
+    textAlign: "center",
+  },
+  viewWaterItem: {
+    backgroundColor: "white",
+    padding: 3,
 
-  storeWrapper: {
-    //paddingTop: 80,
-    paddingHorizontal: 15,
-    backgroundColor: "yellow",
+    marginTop: 30,
+    bottom: 30,
+    //  width: "100%",
+    width: responsiveWidth(95),
+    //width: Dimensions.get("window").width - 20,
+    //height: 560,
+    //height: Dimensions.get("window").height/2 + 250,
+    height: responsiveHeight(88),
+    marginLeft: 0,
+    borderRadius: 10,
+    marginRight: 5,
+    shadowColor: "black",
+    shadowRadius: 5,
+    shadowOffset: {
+      height: 5,
+      width: 5,
+    },
+    elevation: 7,
+  },
+  wrapperWaterProduct: {
+    // backgroundColor: "blue",
+
+    // marginBottom: 5,
+    flex: 1,
+  },
+
+  productWrapper: {
+    //backgroundColor: "yellowgreen",
+    padding: 10,
+    // flex: 1,
+    //height: 550,
+    // height: 600,
+    height: responsiveHeight(89),
     marginTop: 10,
   },
-  sectionTitle: {
+  textwatername: {
     fontSize: 20,
+    flex: 1,
     fontFamily: "nunito-bold",
     fontWeight: "bold",
+    textAlign: "center",
+    //marginLeft: 10,
+    right: 10,
   },
-  items: {
-    marginTop: 15,
-    // backgroundColor: 'red',
-  },
-
-  writeTaskWrapper: {
-    position: "absolute",
-    bottom: 60,
-    width: "100%",
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-  },
-
-  //from storeinfo.js
-  item: {
-    backgroundColor: "white",
-    padding: 10,
-    borderRadius: 10,
+  viewBackBtn: {
+    // backgroundColor: "orange",
+    marginTop: 10,
+    // top:Constants.statusBarHeight ,
+    marginLeft: 15,
+    // width: "100%",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 10,
-    elevation: 4,
   },
-  itemLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  viewforStoreInfos: {
-    flexDirection: "column",
-    alignItems: "center",
-  },
-  square: {
-    width: 65,
-    height: 65,
-    //  backgroundColor: "red",
-    // opacity: 0.4, #55BCF6
-    borderRadius: 15,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: "#55BCF6",
-  },
-  itemText: {
-    maxWidth: "80%",
-  },
-  circular: {
-    width: 12,
-    height: 12,
-    borderColor: "#55BCF6",
-    borderWidth: 2,
-    borderRadius: 5,
-  },
-
-  itemShaun: {
-    padding: 15,
-    marginTop: 16,
-    borderColor: "#bbb",
-    borderWidth: 1,
-    borderStyle: "dashed",
-    borderRadius: 10,
-  },
-  contentShaun: {
-    padding: 40,
-  },
-  listShaun: {
-    marginTop: 20,
-  },
-  storePhotoStyle: {
-    width: 53,
-    height: 53,
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 15,
-    borderBottomLeftRadius: 15,
-    borderBottomRightRadius: 15,
-  },
-  storeNameStyles: {
-    fontSize: 20,
-    fontFamily: "nunito-bold",
-  },
-  storeStatusStyles: {
-    fontSize: 16,
-    fontFamily: "nunito-light",
-  },
-
-  safeviewStyle: {
+  container: {
     flex: 1,
-  },
-  buttonPressed: {
-    backgroundColor: "green",
-  },
-  buttonText: {
-    color: "white",
-    textAlign: "center",
+    backgroundColor: "lightcyan",
+    // justifyContent:'center',
+    //alignItems:'center'
   },
 });

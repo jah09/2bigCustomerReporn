@@ -136,12 +136,14 @@ export default function StationModule() {
 
                     navigation.navigate("toProductScreen", { item });
                   }}
-                  disabled={
-                    item.Subscribed_Package &&
-                    item.Subscribed_Package.length > 0 &&
-                    item.Subscribed_Package[0].packageName === "Package A" &&
-                    ((item.Subscribed_Package[0].orderLimit = 0), true)
-                  }
+                  // disabled={
+                  //   item.Subscribed_Package &&
+                  //   item.Subscribed_Package.length > 0 &&
+                  //   item.Subscribed_Package[0].packageName === "Package A" &&
+                  //   ((item.Subscribed_Package[0].orderLimit = 10), true)
+                  // }
+                  
+                  disabled={item.currentSubscription && item.currentSubscription==="LimitReached"}
                 >
                   <View style={styles.item} key={item.idno}>
                     <View style={styles.itemLeft}>

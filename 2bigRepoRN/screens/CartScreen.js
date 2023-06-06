@@ -66,21 +66,36 @@ export default function CartScreen() {
     input_SwapWithReservation,
     selectedSwaption,
     rewardScreenNewModeOfPayment,
+    newDeliveryFee,
+    updateTotalAmount_NewDeliveryScreen
   } = route.params ? route.params : {};
   const passedStationName =
     extractedDatas?.refillingStoreProperties?.stationName;
   const passedAdminID = extractedDatas?.adminProperties?.adminID;
   const passedStationStatus =
     extractedDatas?.refillingStoreProperties?.stationStatus;
-  //console.log("line 70",rewardScreenNewModeOfPayment)
+  console.log("line 70",passedTotalAmount);
   const secondItem = item;
+ 
   useEffect(() => {
     if (passedTotalAmount !== null) {
-      setFinalTotalAmount(passedTotalAmount);
+      //setFinalTotalAmount(passedTotalAmount);
+      //setTotalAmount(passedTotalAmount);
     }
-  }, [passedTotalAmount]);
+    
 
-  //console.log("RECEIVING CART SCREEN --->Total Fee",passedTotalAmount);
+
+    // if(updateTotalAmount_NewDeliveryScreen!==null){
+    //   setFinalTotalAmount(0);
+    //   setTotalAmount(0);
+    //   setTotalAmount(updateTotalAmount_NewDeliveryScreen);
+    //   setFinalTotalAmount(updateTotalAmount_NewDeliveryScreen);
+    // }
+
+  }, [passedTotalAmount,updateTotalAmount_NewDeliveryScreen]);
+ 
+
+  console.log("RECEIVING CART SCREEN --->Total Fee",updateTotalAmount_NewDeliveryScreen);
   // console.log("RECEIVING CART SCREEN --->Selected Item",selectedItem);
 
   // console.log(
@@ -228,7 +243,7 @@ export default function CartScreen() {
   const [newDeliveryDetails, setnewDeliveryDetails] = useState(
     paramnewDeliveryDetails
   );
-  // console.log("passed delivery details",  newDeliveryDetails[0].orderTypes)
+ 
   const neworderTypes = newDeliveryDetails?.[0].orderTypes.split(", ");
 
   const [newOrder_Type, setnewOrder_Type] = useState();
@@ -296,8 +311,8 @@ export default function CartScreen() {
           ? parseFloat(newDeliveryDetails[0].vehicle3Fee)
           : null;
       setvechicle3fee(vehicle3Fee);
-      console.log("lne 298",vehicle3Fee)
-    } 
+      console.log("lne 298", vehicle3Fee);
+    }
   }, [newDeliveryDetails]);
   const [vechicle1fee, setvechicle1fee] = useState();
   const [vechicle2fee, setvechicle2fee] = useState();
@@ -318,14 +333,16 @@ export default function CartScreen() {
       //   )} for 1 pc/s.\n₱${vechicle2fee.toFixed(
       //     2
       //   )} for 2-5 pc/s\n₱${vechicle3fee.toFixed(2)} for 6 and more.`
-      // );
-      let alertMessage = `Standard Delivery: Your order will be delivered within the day.\n\nExpress Delivery: Your order will be delivered within a specific span of time.\n\nReservation Delivery: You will be the one to decide when to deliver the water.\n\nDelivery fee is based on your distance from the store.\n\nVehicle fee is based on your overall quantities.\n\n₱${vechicle1fee.toFixed(2)} for 1 pc/s.\n₱${vechicle2fee.toFixed(2)} for 2-5 pc/s.`;
-
-      
-  if (vechicle3fee || !isNaN(vechicle3fee)) {
-    alertMessage += `\n₱${vechicle3fee.toFixed(2)} for 6 and more.`;
-  }
-  Alert.alert("Note", alertMessage);
+      // ); \n₱${vechicle2fee.toFixed(2)} for 2-5 pc/s.
+      let alertMessage = `Standard Delivery: Your order will be delivered within the day.\n\nExpress Delivery: Your order will be delivered within a specific span of time.\n\nReservation Delivery: You will be the one to decide when to deliver the water.\n\nDelivery fee is based on your distance from the store.\n\nVehicle fee is based on your overall quantities.\n\n₱${vechicle1fee.toFixed(
+        2
+      )} for 1 pc/s.`;
+      if (vechicle2fee || !isNaN(vechicle2fee)) {
+        alertMessage += `\n₱${vechicle2fee.toFixed(2)} for 2-5 pc/s`;
+      } else if (vechicle3fee || !isNaN(vechicle3fee)) {
+        alertMessage += `\n₱${vechicle3fee.toFixed(2)} for 6 and more.`;
+      }
+      Alert.alert("Note", alertMessage);
       const deliveryTypeholder = [];
       const { stanDeliverytype, exDeliveryType, resDeliveryType } =
         newDeliveryDetails[0];
@@ -354,6 +371,7 @@ export default function CartScreen() {
       setText("Reservation Date");
     } else {
       setpassedCombinedData(null);
+
       setCheckedItemKey_deliveryType(null);
       setCheckedItemKey_paymentMethod(null);
       console.log("pick up is press");
@@ -437,7 +455,7 @@ export default function CartScreen() {
   const [reservationDeliveryTypes, setreservationDeliveryTypes] = useState();
   const [selectedReserveDeliveryType, setselectedReserveDeliveryType] =
     useState();
-   console.log("434",selectedReserveDeliveryType)
+  console.log("434", selectedReserveDeliveryType);
   const [
     checkedItemKey_reservationDeliveryTypes,
     setcheckedItemKey_reservationDeliveryTypes,
@@ -453,10 +471,10 @@ export default function CartScreen() {
   // const minDate = new Date(); // current date
   // minDate.setHours(0, 0, 0, 0); // set hours, minutes, seconds, and milliseconds to zero
   const minDate = new Date(); // current date
-minDate.setDate(minDate.getDate() + 1); // add one day
+  minDate.setDate(minDate.getDate() + 1); // add one day
 
-// Set hours, minutes, seconds, and milliseconds to zero
-minDate.setHours(0, 0, 0, 0);
+  // Set hours, minutes, seconds, and milliseconds to zero
+  minDate.setHours(0, 0, 0, 0);
 
   const [reserveDeliverydate, setreserveDeliverydate] = useState(new Date());
   const [reserveDeliverymode, setreserveDeliverymode] = useState("date");
@@ -497,11 +515,11 @@ minDate.setHours(0, 0, 0, 0);
       setreserveDeliveryTime("Reservation Time");
     } else {
       console.log("Reservation, Selected Delivery Type is  Express");
-     
+
       setreserveDeliverytext(fdate);
-     
-       //setreserveDeliveryTime("Reservation Time");
-       setreserveDeliveryTime(ftime);
+
+      //setreserveDeliveryTime("Reservation Time");
+      setreserveDeliveryTime(ftime);
       setreservationDate_ReserveDeliveryTypes(fdate);
       setreservation_ReserveDeliveryTypes(ftime);
     }
@@ -520,29 +538,25 @@ minDate.setHours(0, 0, 0, 0);
       item.key === checkedItemKey_paymentMethod ? null : item.key
     );
     if (item.value === "CashOnDelivery") {
-      // console.log("COD");
-      // if (selectedOrdertype === "PickUp") {
-      //   Alert.alert("To our beloved customer", "COD is only for delivery.");
-      // }
+     
     } else if (item.value === "Gcash") {
       // setShowModal_ModeOfPayment(true);
     } else {
       // if(totalInitialAmount===0 || totalInitialAmount===0.00){
       //   Alert.alert("Warning","Initial amount must not be a 0.");
       // }else{
-        navigation.navigate("RewardScreen", {
-          passedStationName,
-          selectedOrdertype,
-          secondItem,
-          extractedDatas,
-          FinalTotalAmount: parseFloat(FinalTotalAmount),
-          customerData,
-          selectedItem,
-          paymentMethods,
-          gcashNumber,
-        });
-     
-    
+      navigation.navigate("RewardScreen", {
+        passedStationName,
+        selectedOrdertype,
+        secondItem,
+        extractedDatas,
+        FinalTotalAmount: parseFloat(FinalTotalAmount||updateTotalAmount_NewDeliveryScreen),
+        customerData,
+        selectedItem,
+        paymentMethods,
+        gcashNumber,
+      });
+
       //console.log("inside else",rewardsData);
     }
   };
@@ -631,7 +645,16 @@ minDate.setHours(0, 0, 0, 0);
   const adminLong = parseFloat(
     extractedDatas.refillingStoreProperties.longitude
   );
-  const [deliveyfeeValue, setdeliveyfeeValue] = useState();
+ // setdeliveyfeeValue(newDeliveryFee ?? null);
+  useEffect(() => {
+    if (newDeliveryFee !== null) {
+      console.log("line 649",newDeliveryFee);
+      setdeliveyfeeValue(newDeliveryFee);
+    } else {
+      setdeliveyfeeValue(0);
+    }
+  }, [newDeliveryFee]);
+  const [deliveyfeeValue, setdeliveyfeeValue] = useState(0);
   //calculate distance of customer to store and add it to initial amount
   useLayoutEffect(() => {
     // setQuantity(Object.values(newCounts)[0]);
@@ -748,6 +771,7 @@ minDate.setHours(0, 0, 0, 0);
 
     //console.log("line 695",vehicle1Name)
     if (selectedOrdertype === "Delivery") {
+
       //standard delivery type
       if (selectedDeliveryType === standardDeliveryValue) {
         console.log("Standard CUstomer distance", customerDistanceToStation);
@@ -772,6 +796,7 @@ minDate.setHours(0, 0, 0, 0);
               subtotal = total + vehicle3Fee; //total amount is added by the fee of the vehicle
 
               setvehicleFeeSaveToDb(vehicle3Fee);
+
               if (!isNaN(subtotal)) {
                 setTotalAmount(subtotal.toFixed(2));
               } else {
@@ -1355,25 +1380,21 @@ minDate.setHours(0, 0, 0, 0);
   const ReservationDeliveryType_HandleSubmit = () => {
     if (selectedReserveDeliveryType === "Standard") {
       console.log("line 1335-->standard ");
-        if(!reservationDate_ReserveDeliveryTypes){
-          Alert.alert("Warning", "Please choose an reservation date.");
-        }
-        else{
-          setShowReservationModal(false);
-          setcheckedItemKey_reservationDeliveryTypes(null);
-          setreserveDeliverytext("Reservation Date");
-          setreserveDeliverydate(moment().toDate()); // Update reserveDeliverydate with the current date
-          //setselectedReserveDeliveryType(null);
-        }
-    }
-    else{
-      if(!reservationDate_ReserveDeliveryTypes){
+      if (!reservationDate_ReserveDeliveryTypes) {
         Alert.alert("Warning", "Please choose an reservation date.");
+      } else {
+        setShowReservationModal(false);
+        setcheckedItemKey_reservationDeliveryTypes(null);
+        setreserveDeliverytext("Reservation Date");
+        setreserveDeliverydate(moment().toDate()); // Update reserveDeliverydate with the current date
+        //setselectedReserveDeliveryType(null);
       }
-      else if(!reservationTime){
+    } else {
+      if (!reservationDate_ReserveDeliveryTypes) {
+        Alert.alert("Warning", "Please choose an reservation date.");
+      } else if (!reservationTime) {
         Alert.alert("Warning", "Please choose an reservation time.");
-      }
-      else{
+      } else {
         setShowReservationModal(false);
         setreserveDeliverytext("Reservation Date");
         setcheckedItemKey_reservationDeliveryTypes(null);
@@ -1404,9 +1425,9 @@ minDate.setHours(0, 0, 0, 0);
 
   const [orderTypeValue, setOrderTypeValue] = useState(); //pass the order Type  value, "??" is used to check if null ba or di
   const [deliveryTypeValue, setdeliveryTypeValue] = useState();
- // console.log("line 1355", deliveryTypeValue);
+  // console.log("line 1355", deliveryTypeValue);
   const [reservationDate, setReservationDate] = useState("");
- // console.log("Pickup reservation date-->line 1354", reservationDate);
+  // console.log("Pickup reservation date-->line 1354", reservationDate);
   const [
     reservationDate_ReserveDeliveryTypes,
     setreservationDate_ReserveDeliveryTypes,
@@ -1417,7 +1438,7 @@ minDate.setHours(0, 0, 0, 0);
   // console.log("Gcash link",gcashProoflink_Storage)
   //setselectedPaymentMethod
   const [selectedpaymenthod, setselectedPaymentMethod] = useState();
- // console.log("selected payment method", selectedpaymenthod);
+  // console.log("selected payment method", selectedpaymenthod);
   const [selectedpaymentMethod_Gcash, setselectedpaymentMethod_Gcash] =
     useState();
   //get rewardspoints collection from REWARDSYSTEM COLLECTION passedAdminID
@@ -1438,7 +1459,7 @@ minDate.setHours(0, 0, 0, 0);
 
             ...data[key],
           }));
-        //  console.log("rewards data", rewardsInfo);
+          //  console.log("rewards data", rewardsInfo);
           setrewardsData(rewardsInfo);
         } else {
           console.log("Else here");
@@ -1469,27 +1490,23 @@ minDate.setHours(0, 0, 0, 0);
           console.log("Selected Order type is pIckup");
           if (selectedOrdertype === null) {
             Alert.alert("Warning", "Please choose an order type.");
-          } 
-          else if (
+          } else if (
             checkedItemKey_deliveryType === "Reservation" &&
-            (!text || text === null|| !reservationDate)
-          ){
+            (!text || text === null || !reservationDate)
+          ) {
             Alert.alert("Warning", "Please choose an reservation date.");
-          }
-          else if (checkedItemKey_deliveryType === null) {
+          } else if (checkedItemKey_deliveryType === null) {
             Alert.alert("Warning", "Please choose an delivery type.");
-          }  else if (
+          } else if (
             combinedData &&
             combinedData.deliveryAddressOption === null
           ) {
             console.log("No Pickup address");
           } else if (checkedItemKey_paymentMethod === null) {
             Alert.alert("Warning", "Please choose an payment method .");
-          } 
-          else if(!totalInitialAmount){
+          } else if (!totalInitialAmount) {
             Alert.alert("Warning", "Please make an order.");
-          }
-          else {
+          } else {
             if (selectedpaymenthod === "Gcash") {
               if (gcashProofImage === null) {
                 setShowModal_ModeOfPayment(true);
@@ -1525,8 +1542,7 @@ minDate.setHours(0, 0, 0, 0);
             Alert.alert("Warning", "Please choose a payment method.");
           } else if (!combinedData) {
             Alert.alert("Warning", "Please choose a delivery address.");
-          }
-          else if(!totalInitialAmount){
+          } else if (!totalInitialAmount) {
             Alert.alert("Warning", "Please make an order.");
           } else {
             if (selectedpaymenthod === "Gcash") {
@@ -1853,11 +1869,11 @@ minDate.setHours(0, 0, 0, 0);
 
       const key = Object.keys(orderedStore).length; // Calculate the next sequential key
       orderedStore[key] = {
-        adminId: passedAdminID
+        adminId: passedAdminID,
       };
       const customerData = {
         ...snapshot.val(),
-        orderedStore: orderedStore
+        orderedStore: orderedStore,
       };
       update(customerRef, customerData)
         .then(() => {
@@ -2195,7 +2211,7 @@ minDate.setHours(0, 0, 0, 0);
                   onPress={() => {
                     if (selectedReserveDeliveryType === "Standard") {
                       reserveDeliveryshowMode("date");
-                    } else if(selectedReserveDeliveryType === "Express"){
+                    } else if (selectedReserveDeliveryType === "Express") {
                       reserveDeliveryshowMode("date");
                       setreserveDeliveryTime("Reservation Time"); // Reset the reservation time to the initial value
                     }
@@ -2228,7 +2244,6 @@ minDate.setHours(0, 0, 0, 0);
                   display="default"
                   onChange={reserveDeliveryonChange}
                   minimumDate={minDate}
-                 
                 />
               )}
 
@@ -2927,6 +2942,9 @@ minDate.setHours(0, 0, 0, 0);
                   );
                   console.log("cart screen", selectedReserveDeliveryType);
                   navigation.navigate("NewDeliveryAdd", {
+                    adminLatt,
+                    adminLong,
+                    deliveyfeeValue,
                     passedStationName,
                     selectedItem,
                     extractedDatas,
@@ -2934,7 +2952,10 @@ minDate.setHours(0, 0, 0, 0);
                       parseFloat(passedTotalAmount) || FinalTotalAmount,
                     rewardScreenNewModeOfPayment,
                     selectedpaymenthod,
-                    selectedReserveDeliveryType
+                    selectedReserveDeliveryType,
+                    selectedDeliveryType,
+                    paramnewDeliveryDetails,
+                    totalQuantity
                   });
                   // console.log("test 1009", selectedItem);
                 }}
@@ -3018,7 +3039,8 @@ minDate.setHours(0, 0, 0, 0);
                   textAlign: "right",
                 }}
               >
-                Sub Total- ₱ {(totalAmount && totalAmount) || 0}
+             Sub Total - ₱ {((totalAmount && totalAmount) || 0)}
+
               </Text>
             </View>
 
@@ -3061,7 +3083,7 @@ minDate.setHours(0, 0, 0, 0);
                 {isNaN(FinalTotalAmount)
                   ? "0"
                   : (parseFloat(FinalTotalAmount) || 0).toFixed(2)}
-                {/* Total Amount - ₱{isNaN(FinalTotalAmount) ? "0" : (typeof FinalTotalAmount === 'number' ? FinalTotalAmount.toFixed(2) : "0")} */}
+            
               </Text>
             </View>
             {/* button for place oder */}
@@ -3338,7 +3360,7 @@ const styles = StyleSheet.create({
   storeStatusStyles: {
     fontSize: 16,
     fontFamily: "nunito-light",
-  },  
+  },
   storeNameStyles: {
     fontSize: 20,
     fontFamily: "nunito-bold",
@@ -3458,5 +3480,3 @@ const styles = StyleSheet.create({
     // backgroundColor:'blue'
   },
 });
-
-

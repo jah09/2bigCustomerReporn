@@ -54,8 +54,8 @@ export default function RewardScreen({ navigation }) {
   } = route.params ?? {
     passedStationName: null,
   };
-   console.log("Mode of payment receiving",selectedOrdertype
-   )
+  //  console.log("Mode of payment receiving",selectedOrdertype
+  //  )
 
   // setreceiverModeOfPayment(updatedPaymentMethods);
   const [receiverModeOfPayment, setreceiverModeOfPayment] = useState();
@@ -190,6 +190,8 @@ export default function RewardScreen({ navigation }) {
   const [showManualTextInput, setshowManualTextInput] = useState(false);
   const [manualTextinputValue, setmanualTextinputValue] = useState("");
 
+  // console.log("line 192",manualTextinputValue)
+  // console.log("line 192", typeof manualTextinputValue)
   const [autoUsePoints, setAutoUsePoints] = useState(false);
 
   //auto use of the points
@@ -323,41 +325,9 @@ export default function RewardScreen({ navigation }) {
 
   //function to deduct manually
   const manualPointsDeduct = () => {
- 
-      // if (isNaN(parseFloat(manualTextinputValue)) || parseFloat(manualTextinputValue) <= 0) {
-      //   Alert.alert("Warning", "Input value must be a valid number and  greater than zero.");
-      // }
-      // else if (isNaN(manualTextinputValue) || !Number.isInteger(Number(manualTextinputValue))) {
-      //   alert(
-      //     "Please enter a valid number1."
-      //   );
-      // }
-      // else if (!/^\d+$/.test(manualTextinputValue)) {
-      //   alert(
-      //     "Please enter a valid number2."
-      //   );
-      // }
-      // else if (!/^\d+$/.test(manualTextinputValue) && !/^\d+\.\d+$/.test(manualTextinputValue)) {
-      //   alert(
-      //     "Please enter a valid number."
-      //   );
-      //   return;
-      // }
-      if (isNaN(parseFloat(manualTextinputValue)) || parseFloat(manualTextinputValue) <= 0) {
-        Alert.alert("Warning", "Input value must be a valid number and greater than zero.");
-      }
-      else if (!/^\d+\.\d+$/.test(manualTextinputValue)) {
-        alert(
-          "Please enter a valid number."
-        );
-      }
-      else if (!/^\d+$/.test(manualTextinputValue)) {
-        alert(
-          "Please enter a valid number."
-        );
-      }
+
       //if ang ge enter na value is greater than sa customer pts
-      else if (
+    if (
         parseFloat(manualTextinputValue) > parseFloat(customerRewardsPoints)
       ) {
         Alert.alert("Warning", `Insufficient points balance.`);
@@ -858,7 +828,8 @@ export default function RewardScreen({ navigation }) {
                       },
                     ]}
                     onChangeText={(text) => {
-                      setmanualTextinputValue(parseFloat(text));
+                      setmanualTextinputValue(text.replace(/[^0-9]/g,''));
+                      
                       setUseAllIsDisable(true);
                       if (text === "") {
                         setUseAllIsDisable(false);
@@ -866,7 +837,8 @@ export default function RewardScreen({ navigation }) {
                         setUseAllIsDisable(true);
                       }
                     }}
-                    keyboardType="default"
+                   // onChangeText={onChangeText}
+                    keyboardType="numeric"
                     value={manualTextinputValue}
                     editable={customerRewardsPoints != 0 || passedTotalAmount!=0.00  }
                   />
