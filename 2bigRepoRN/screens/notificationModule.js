@@ -7,6 +7,7 @@ import {
   Image,
   SafeAreaView,
   ScrollView,
+  ToastAndroid,
 } from "react-native";
 import { db } from "../firebaseConfig";
 import {
@@ -22,19 +23,13 @@ import { useNavigation } from "@react-navigation/native";
 import { Fontisto } from "@expo/vector-icons";
 import moment from "moment";
 import { NotificationContext } from "../shared/NotificationContext";
-import Toast from 'react-native-toast-message';
-export default function NotificationScreen() {
-  const [notifications, setNotifications] = useState([]);
-  console.log("Notification:", notifications);
-  const [readNotifications, setReadNotifications] = useState([]);
-  const [currentTime, setCurrentTime] = useState(new Date());
 
-  //const { unreadCount, setUnreadCount } = useContext(NotificationContext);
+export default function NotificationScreen() {
+  const [readNotifications, setReadNotifications] = useState([]);
+  console.log("readNotifications:", readNotifications);
+  const [currentTime, setCurrentTime] = useState(new Date());
   const { unreadCount, updateUnreadCount } = useContext(NotificationContext);
   const navigation = useNavigation();
-  //const { unreadCount } = useContext(NotificationContext);
-
-
   console.log("unreadCount:", unreadCount);
 
   useEffect(() => {
@@ -59,20 +54,40 @@ export default function NotificationScreen() {
             if (snapshot.exists()) {
               const data = snapshot.val();
 
-
               const NotifInformation = Object.keys(data)
                 .map((key) => ({
                   id: key,
                   ...data[key],
                 }))
                 .filter((notification) => notification.receiver === "Customer");
-              setNotifications(NotifInformation);
+
+              // console.log("NotifInformation:", NotifInformation);
+
+              const formattedNotifications = NotifInformation.map(
+                (notification) => ({
+                  ...notification,
+                  notificationDate: moment(
+                    notification.notificationDate
+                  ).format(),
+                })
+              );
+              //console.log("FormattedNotifications:", formattedNotifications); // Add this line
+
+              // Sort notifications in descending order based on notificationDate
+              const sortedNotifications = formattedNotifications.sort(
+                (a, b) =>
+                  moment(b.notificationDate).valueOf() -
+                  moment(a.notificationDate).valueOf()
+              );
+              // console.log("SortedNotifications:", sortedNotifications); // Add this line
+              setNotifications(sortedNotifications);
+
               setReadNotifications(
                 NotifInformation.filter(
                   (notification) => notification.status === "read"
                 )
               );
-              console.log("NotifInformation:", NotifInformation);
+              console.log("READNotifInformation:", NotifInformation);
               const unreadNotifications = NotifInformation.filter(
                 (notification) => notification.status === "unread"
               );
@@ -82,10 +97,8 @@ export default function NotificationScreen() {
               const scheduledNotifications = NotifInformation.filter(
                 (notification) => notification.title === "Order Reminder"
               );
-              console.log("SCHED:", scheduledNotifications);
+              // console.log("SCHED:", scheduledNotifications);
               displayScheduledNotificationsAsToasts(scheduledNotifications);
-              
-
             }
           },
           (error) => {
@@ -103,22 +116,42 @@ export default function NotificationScreen() {
 
     return () => clearInterval(intervalId);
   }, []);
+  const [notifications, setNotifications] = useState([]);
+  // console.log("Notification:", notifications);
 
-  
   const displayScheduledNotificationsAsToasts = (scheduledNotifications) => {
     scheduledNotifications.forEach((notification) => {
-      Toast.show({
-        type: 'info',
-        text1: notification.body,
-        position: 'center',
-        autoHide: true,
-        onHide: () => handleDeleteNotification(notification.notificationID),
-      });
+      const currentDate = new Date();
+      //console.log("CURRENT:", currentDate);
+      const scheduledSentDate = new Date(notification.scheduledSent);
+      // console.log("Sched date:", scheduledSentDate);
+
+      if (currentDate >= scheduledSentDate) {
+        ToastAndroid.showWithGravityAndOffset(
+          notification.body,
+          ToastAndroid.LONG,
+          ToastAndroid.TOP,
+          0,
+          200 // Adjust the Y offset as needed
+        );
+      }
     });
   };
 
-  
+  // const displayScheduledNotificationsAsToasts = (scheduledNotifications) => {
+  //   scheduledNotifications.forEach((notification) => {
+  //     const currentDate = new Date();
+  //     console.log("CURRENT:", currentDate);
+  //     const scheduledSentDate = new Date(notification.scheduledSent);
+  //     console.log("Sched date:", scheduledSentDate);
 
+  //     if (currentDate >= scheduledSentDate) {
+  //       // Display the custom toast
+  //       console.log(1232);
+  //       <CustomToast message={notification.body} duration={3000} />;
+  //     }
+  //   });
+  // };
 
   const handleNotificationPress = async (notification) => {
     if (notification.status === "unread") {
@@ -167,7 +200,27 @@ export default function NotificationScreen() {
                 ...data[key],
               }))
               .filter((notification) => notification.receiver === "Customer");
-            setNotifications(NotifInformation);
+
+            //  console.log("NotifInformation:", NotifInformation);
+
+            const formattedNotifications = NotifInformation.map(
+              (notification) => ({
+                ...notification,
+                notificationDate: moment(
+                  notification.notificationDate
+                ).format(),
+              })
+            );
+            // console.log("FormattedNotifications:", formattedNotifications); // Add this line
+
+            // Sort notifications in descending order based on notificationDate
+            const sortedNotifications = formattedNotifications.sort(
+              (a, b) =>
+                moment(b.notificationDate).valueOf() -
+                moment(a.notificationDate).valueOf()
+            );
+            //  console.log("SortedNotifications:", sortedNotifications); // Add this line
+            setNotifications(sortedNotifications);
             setReadNotifications(
               NotifInformation.filter(
                 (notification) => notification.status === "read"
@@ -176,7 +229,6 @@ export default function NotificationScreen() {
             const unreadNotifications = NotifInformation.filter(
               (notification) => notification.status === "unread"
             );
-
             // Update the status of all unread notifications to "read"
             unreadNotifications.forEach(async (notification) => {
               const notificationRef = ref(
@@ -193,11 +245,9 @@ export default function NotificationScreen() {
         (error) => {
           console.error(error);
         }
-
       );
     }
   };
-
   const handleDeleteNotification = (notificationID) => {
     setNotifications(
       notifications.filter(
@@ -216,32 +266,28 @@ export default function NotificationScreen() {
       );
     }
   };
-  
+
   return (
     <SafeAreaView style={styles.container}>
+        {notifications.length > 0 ? (
       <ScrollView>
         <View>
           <Text style={styles.text1}>Notifications</Text>
-
         </View>
         <View style={{ marginLeft: 220 }}>
           <TouchableOpacity onPress={handleClickMarkAll}>
-            <Text style={styles.text3}> Mark all as read</Text>
+            <Text style={styles.text3}>Mark all as read</Text>
           </TouchableOpacity>
         </View>
         {notifications
-          .filter((notification) => notification.title !== "Order Reminder") // Filter out the scheduled notifications
-          .sort(
-            (a, b) =>
-              new Date(b.notificationDate) - new Date(a.notificationDate)
-          )
+          .filter((notification) => notification.title !== "Order Reminder")
           .map((notification) => (
             <View
               key={notification.id}
               style={[
-                styles.notification,readNotifications.includes(notification) &&
-                readNotifications.includes(notification) && styles.readNotification,
-
+                styles.notification,
+                readNotifications.includes(notification.id) &&
+                  styles.readNotification,
               ]}
             >
               <TouchableOpacity
@@ -278,21 +324,29 @@ export default function NotificationScreen() {
                     alignItems: "center",
                   }}
                 >
-                  <Text style={styles.text2}> {notification.body}</Text>
+                  <Text style={styles.text2}>{notification.body}</Text>
                 </View>
               </View>
               <TouchableOpacity
                 style={styles.deleteButton}
                 onPress={() => handleDeleteNotification(notification.id)}
               >
-                <Fontisto name="trash" size={13} color="#DFD8C8"></Fontisto>
+                <Fontisto name="trash" size={13} color="#DFD8C8" />
               </TouchableOpacity>
             </View>
           ))}
       </ScrollView>
-    </SafeAreaView>
-  );
-      }  
+    ) : (
+      <View>
+        <Text>No Notification</Text>
+      </View>
+    )}
+  </SafeAreaView>
+);
+
+    
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -377,13 +431,13 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
   },
-  toastContainer:{
-  backgroundColor: '#333333',
-  borderRadius: 8,
-  padding: 10,
-  marginHorizontal: 20,
-  marginBottom: 20,
-  alignItems: 'center',
-  justifyContent: 'center',
-},
+  toastContainer: {
+    backgroundColor: "#333333",
+    borderRadius: 8,
+    padding: 10,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

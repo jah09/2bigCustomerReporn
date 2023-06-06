@@ -9,7 +9,7 @@ import {
 import React, { useRef, useLayoutEffect } from "react";
 import { useState, useEffect } from "react";
 import * as Location from "expo-location";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation ,useFocusEffect } from "@react-navigation/native";
 import { FontAwesome } from "@expo/vector-icons";
 import { GOOGLE_API_KEY } from "../APIKEY";
 import Geocoder from "react-native-geocoding";
@@ -20,6 +20,7 @@ import MapView, {
   Polyline,
   Polygon,
 } from "react-native-maps";
+import { useIsFocused } from "@react-navigation/native";
 import MapViewDirections from "react-native-maps-directions";
 import { db } from "../firebaseConfig";
 import { ref, onValue, child, update } from "firebase/database";
@@ -35,17 +36,17 @@ export default function MapModule({}) {
   const [storeInformation, setstoreInformation] = useState([]);
   const navigation = useNavigation();
   const route = useRoute();
+  const isFocused = useIsFocused();
   const driverLatLong = route.params?.driverLatLong;
   const displayPolyline = route.params?.displayPolyline;
-  //console.log("line 26",displayPolyline);
-
+  console.log("line 42-->Map screen",displayPolyline)
   const [selectedPlace, setSelectedPlace] = useState(null);
   const { width, height } = Dimensions.get("window");
   const aspect_ratio = width / height;
   const LATTITUDE_DELTA = 0.005;
   const LONGITUDE_DELTA = LATTITUDE_DELTA * aspect_ratio;
 
-  //hook to get the  admin information from database
+  //cebu city bounds
   function isStoreWithinCebuCityBounds(lat, long) {
     const cebuCityBounds = {
       south: 10.259524,
@@ -128,12 +129,17 @@ export default function MapModule({}) {
   //console.log("line 52",location.coords.latitude);
   const [errorMsg, setErrorMsg] = useState(null);
   const [selectedStore, setSelectedStore] = useState(null);
-  //console.log("line 67",selectedStore);
+
   const [polylineCoords, setPolylineCoords] = useState([]);
   const [polylineCoordsStoreToCustomer, setpolylineCoordsStoreToCustomer] =
     useState([]);
   const [origin, setOrigin] = useState();
   const [destination, setDestination] = useState();
+
+
+  //listen if switch tabs
+
+  
 
   //get the location of customer and driver
   useEffect(() => {
@@ -148,7 +154,7 @@ export default function MapModule({}) {
           longitude: driverLatLong?.driverLong || null,
         },
       ];
-      //console.log("inside this 67",polyLineCoords);
+      console.log("inside this 67", polyLineCoords);
       setPolylineCoords(polyLineCoords);
     }
   }, [location, driverLatLong, displayPolyline]);
@@ -240,8 +246,8 @@ export default function MapModule({}) {
           .then((json) => {
             let address = json.results[5].formatted_address;
             let types = json.results[3].address_components;
-           // console.log("address", json);
-          //  console.log("types", types);
+            // console.log("address", json);
+            //  console.log("types", types);
             let streetNameComponent = types.find((component) =>
               component.types.includes("route")
             );
@@ -249,7 +255,6 @@ export default function MapModule({}) {
             let streetName = streetNameComponent
               ? streetNameComponent.short_name
               : "";
-
 
             // Modify the address string to include the street name
             address = address.replace("Cebu City", streetName + " Cebu City");
@@ -378,14 +383,10 @@ export default function MapModule({}) {
           }}
           minZoomLevel={10}
           showsUserLocation={true}
-          
           showsMyLocationButton={true}
           showsBuildings={true}
-
           zoomEnabled={true}
           showsTraffic={false}
-          
-
           showsCompass={true}
           showsIndoors={true}
           loadingEnabled={true}
@@ -502,12 +503,21 @@ export default function MapModule({}) {
             );
           })}
 
-          {polylineCoords.length > 0 && (
+          {/* {polylineCoords.length > 0 && (
             <MapViewDirections
               origin={polylineCoords[0]}
               destination={polylineCoords[1]}
               strokeWidth={3}
               strokeColor="#87cefa"
+              apikey={GOOGLE_API_KEY}
+            />
+          )} */}
+          {polylineCoords.length > 0  && (
+            <MapViewDirections
+              origin={polylineCoords[0]}
+              destination={polylineCoords[1]}
+              strokeWidth={3}
+              strokeColor="red"
               apikey={GOOGLE_API_KEY}
             />
           )}
