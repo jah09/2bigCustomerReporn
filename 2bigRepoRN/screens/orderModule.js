@@ -35,16 +35,20 @@ import {
 } from "firebase/database";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ScrollView } from "react-native-web";
+
 import moment from "moment/moment";
+
 export default function OrderModule({}) {
   // const deviceHeight = Dimensions.get("window").height;
   // const deviceWidth = Dimensions.get("window").width;
   const [deviceHeight, setdeviceHeight] = useState();
   const [deviceWidth, setdeviceWidth] = useState();
 
+
   const onPresshandler_toStationPage = () => {
     navigation.goBack();
   };
+
   useEffect(() => {
     const deviceHeight = Dimensions.get("window").height;
     const deviceWidth = Dimensions.get("window").width;
@@ -78,10 +82,33 @@ export default function OrderModule({}) {
   const [driverData, setDriverData] = useState();
   const [driverLocation, setDriverLocation] = useState();
   //console.log("line 52",driverLocation);
-
+ 
+  
+ 
+  useEffect(()=>{
+    if(orderIDfrom_handleViewDriverLocation && orderInfo){
+      const order = orderInfo.find((order) => order.orderID === orderIDfrom_handleViewDriverLocation);
+      //const order = orderInfo.find((order) => order.orderID === orderIDfrom_handleViewDriverLocation);
+      if(order){
+        const orderStatus = order.order_OrderStatus;
+        console.log("Order Status:", orderStatus);  
+        if (orderStatus === "Delivered" || orderStatus === "Payment Received") {
+          // Order status is "Delivered" or "Payment Received", hide the polyline
+          setdisplayPolyline(false);
+          navigation.navigate("Maps", {displayPolyline: displayPolyline });
+        } else if (orderStatus === "Accepted") {
+          // Order status is "Accepted", show the polyline
+          setdisplayPolyline(true);
+          navigation.navigate("Maps", {displayPolyline: displayPolyline });
+        }
+      }
+    }
+   },[orderIDfrom_handleViewDriverLocation,orderInfo])
+   const [displayPolyline,setdisplayPolyline]=useState(true);
   //function nga mo filter if unsa ang GE CLICK NGA DRIVER'S LOCATION, E PASA DIRE ANG ORDER ID NGA GE PRESSED OG ANG DRIVER LOCATION
   const handleViewDriverLocation = (driverId, orderId) => {
     const order = orderInfo.find((order) => order.orderID === orderId);
+
     if (order) {
       console.log("inside line 85", orderId);
       const driverLatLong =
@@ -112,6 +139,7 @@ export default function OrderModule({}) {
             orderId,
           });
         }
+
       } else {
         console.log("Driver not found with ID", driverId);
       }
@@ -119,6 +147,8 @@ export default function OrderModule({}) {
       console.log("Order not found with ID", orderId);
     }
   };
+
+
 
   //get the employee data
   useLayoutEffect(() => {

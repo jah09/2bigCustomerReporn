@@ -37,6 +37,7 @@ export default function MapModule({}) {
   const navigation = useNavigation();
   const route = useRoute();
   const isFocused = useIsFocused();
+
   // const driverLatLong = route.params?.driverLatLong;
   // const displayPolyline = route.params?.displayPolyline;
 
@@ -137,7 +138,13 @@ export default function MapModule({}) {
 
   //listen if switch tabs
 
+
+  //listen if switch tabs
+
+  
+
   //get the location of customer and driver
+
   // useEffect(() => {
   //   if (displayPolyline && driverLatLong) {
   //     const polyLineCoords = [
@@ -154,6 +161,7 @@ export default function MapModule({}) {
   //     setPolylineCoords(polyLineCoords);
   //   }
   // }, [location, driverLatLong, displayPolyline]);
+
 
   // useLayoutEffect(() => {
   //   if (displayPolyline) {
@@ -380,7 +388,9 @@ export default function MapModule({}) {
           showsMyLocationButton={true}
           showsBuildings={true}
           zoomEnabled={true}
+
           showsTraffic={true}
+
           showsCompass={true}
           showsIndoors={true}
           loadingEnabled={true}
@@ -492,6 +502,8 @@ export default function MapModule({}) {
               </Marker>
             );
           })}
+
+
           {/* {polylineCoordsStoreToCustomer && (
             <MapViewDirections
             

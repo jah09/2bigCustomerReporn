@@ -11,7 +11,6 @@ export default function App() {
       <NotificationProvider>
         <HomeStack />
         <PushNotification />
-        
       </NotificationProvider>
     </>
   );
