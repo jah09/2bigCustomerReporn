@@ -1,5 +1,5 @@
 import { useRoute } from "@react-navigation/native";
-import { useState, useRef } from "react";
+
 import {
   responsiveHeight,
   responsiveWidth,
@@ -16,45 +16,65 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
 } from "react-native";
-import React from "react";
+import { getDistance } from "geolib";
 import { globalStyles } from "../ForStyle/GlobalStyles";
 import { GOOGLE_API_KEY_PLACE } from "../APIKEY";
 import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 import { MaterialIcons } from "@expo/vector-icons";
+import React, {
+  useState,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+} from "react";
 
 export default function NewDeliveryAddressScreen({ navigation }) {
   //receive the passedStation from other screen
   const route = useRoute();
   const {
+    adminLatt,
+    adminLong,
     passedStationName,
     extractedDatas,
     item,
     selectedReserveDeliveryType,
     selectedItem,
     passedTotalAmount,
-    FinalTotalAmount,
+   
     selectedpaymenthod,
     rewardScreenNewModeOfPayment,
+    deliveyfeeValue,
+    selectedDeliveryType,
+    paramnewDeliveryDetails,
+    totalQuantity,
   } = route.params ?? {
     passedStationName: null,
     passedTotalAmount,
   };
-  console.log(
-    "line 29 new delivery add screen",
-    typeof passedTotalAmount,
-    passedTotalAmount,
-    typeof FinalTotalAmount,
-    FinalTotalAmount
-  );
-  console.log("Receive new delivery address",selectedReserveDeliveryType,
-  );
+
+  // console.log("Receiver new delivery address->selected delivery type",selectedDeliveryType,
+  // );
+  // console.log("Receiver new delivery address->selected delivery type",adminLatt, adminLong
+  // );
   //button disable
 
   // const onPresshandler_toStationPage = () => {
   //   //  console.log("send 36",secondItem, combinedData);
   //   navigation.goBack();
   // };
-
+  //get the delivey Details from previous screen
+  const [newDeliveryDetails, setnewDeliveryDetails] = useState(
+    paramnewDeliveryDetails
+  );
+ // const [passedTotalAmount,setpassedTotalAmount]=useState(passedTotalAmount);
+   //const [totalAmount,setTotalAmount]=useState(passedTotalAmount);
+  const [tempDeliveryFee, settempDeliveryFee] = useState(deliveyfeeValue||0);
+  const [newDeliveryFee, setNewDeliveryFee] = useState();
+  console.log("passed total amount",passedTotalAmount);
+ 
+  console.log("New delivery fee", newDeliveryFee);
+  console.log("Receiver new delivery address", tempDeliveryFee);
+  console.log("Receiver new delivery address---->Passed total amount from cart screen",passedTotalAmount,typeof passedTotalAmount)
   const DeliveryAddressOption = [
     {
       label: "Same as Home Address",
@@ -80,6 +100,8 @@ export default function NewDeliveryAddressScreen({ navigation }) {
     );
     if (item.value === "Same as Home Address") {
       setShowLandmark(false);
+      console.log("line 99");
+      //  calculateDistance_StoreToNewDeliveryadd();
       // setShowdeliveryAddressModal(true);
       //  navigation.navigate("NewDeliveryAdd",{passedStationName,extractedDatas,secondItem });
     }
@@ -107,10 +129,10 @@ export default function NewDeliveryAddressScreen({ navigation }) {
               extractedDatas,
               selectedItem,
               passedTotalAmount:
-                parseFloat(passedTotalAmount) || FinalTotalAmount,
+                parseFloat(passedTotalAmount),
               rewardScreenNewModeOfPayment,
               selectedpaymenthod,
-              selectedReserveDeliveryType
+              selectedReserveDeliveryType,
             });
           },
         },
@@ -135,35 +157,263 @@ export default function NewDeliveryAddressScreen({ navigation }) {
       ) {
         alert("Please enter less than 11 digits number.");
         return;
-      } 
-      else if (
+      } else if (
         !receiverContactNumber ||
-        typeof receiverContactNumber !== 'string' ||
+        typeof receiverContactNumber !== "string" ||
         /[^0-9]/.test(receiverContactNumber)
       ) {
         alert("Only numbers");
         return;
-      }else {
-        Alert.alert("Delivery address confirmed", "Thank you", [
-          {
-            text: "OK",
-            onPress: () => {
-              //console.log("newdelivery add send to cart screen",selectedpaymenthod)
-              // console.log("new delivery add",passedTotalAmount,FinalTotalAmount)
-              navigation.navigate("CartScreen", {
-                combinedData,
-                extractedDatas,
-                selectedItem,
-                deliveryAddressOption,
-                passedTotalAmount:
-                  parseFloat(passedTotalAmount) || FinalTotalAmount,
-                rewardScreenNewModeOfPayment,
-                selectedpaymenthod,
-                selectedReserveDeliveryType
-              });
-            },
-          },
-        ]);
+      } else {
+        //  const [tempDeliveryFee,settempDeliveryFee]=useState(deliveyfeeValue);
+        if (tempDeliveryFee || tempDeliveryFee === 0) {
+          let deliveryFee = 0;
+          const standardDistance =
+            newDeliveryDetails &&
+            Array.isArray(newDeliveryDetails) &&
+            newDeliveryDetails.length > 0
+              ? parseFloat(newDeliveryDetails[0].standistance)
+              : null;
+          const standardDeliveryFee =
+            newDeliveryDetails &&
+            Array.isArray(newDeliveryDetails) &&
+            newDeliveryDetails.length > 0
+              ? newDeliveryDetails[0].stanDeliveryFee
+              : null;
+
+          //  //extracted delivery distance and fee and value  for EXPRESS
+          const expressDeliveryValue =
+            newDeliveryDetails &&
+            Array.isArray(newDeliveryDetails) &&
+            newDeliveryDetails.length > 0
+              ? newDeliveryDetails[0].exDeliveryType
+              : null;
+          const expressDeliveryFee =
+            newDeliveryDetails &&
+            Array.isArray(newDeliveryDetails) &&
+            newDeliveryDetails.length > 0
+              ? newDeliveryDetails[0].exDeliveryFee
+              : null;
+
+          const expressDeliveryDistance =
+            newDeliveryDetails &&
+            Array.isArray(newDeliveryDetails) &&
+            newDeliveryDetails.length > 0
+              ? newDeliveryDetails[0].expressDistance
+              : null;
+
+          //vehicle value and its fee
+
+          const vehicle1Fee =
+            newDeliveryDetails &&
+            Array.isArray(newDeliveryDetails) &&
+            newDeliveryDetails.length > 0
+              ? parseFloat(newDeliveryDetails[0].vehicle1Fee)
+              : null;
+
+          const vehicle2Fee =
+            newDeliveryDetails &&
+            Array.isArray(newDeliveryDetails) &&
+            newDeliveryDetails.length > 0
+              ? parseFloat(newDeliveryDetails[0].vehicle2Fee)
+              : null;
+          const vehicle3Fee =
+            newDeliveryDetails &&
+            Array.isArray(newDeliveryDetails) &&
+            newDeliveryDetails.length > 0
+              ? parseFloat(newDeliveryDetails[0].vehicle3Fee)
+              : null;
+          if (selectedDeliveryType === "Standard") {
+            const dynamicDistance = getDistance(
+              {
+                latitude: newDeliveryAddressLatitude,
+                longitude: newDeliveryAddressLongitude,
+              },
+              { latitude: adminLatt, longitude: adminLong }
+            );
+            const newdeliveryAddtoStoreLocation = dynamicDistance / 1000; //the result distance is by meter but I divide 1000 so it will result KM
+            console.log(
+              "Distance from new delivery address to store",
+              newdeliveryAddtoStoreLocation
+            );
+            if (newdeliveryAddtoStoreLocation > standardDistance) {
+              const exceedingDistance = (
+                newdeliveryAddtoStoreLocation - parseFloat(standardDistance)
+              ).toFixed(2);
+              console.log("Standard Exceeding Distance", exceedingDistance);
+
+              const additionalCost =
+                parseFloat(standardDeliveryFee) * exceedingDistance;
+              // setdeliveyfeeValue(additionalCost.toFixed(2));
+              console.log(" Standard additioal cost", additionalCost);
+              // settempDeliveryFee(additionalCost);
+              let subtotal = 0;
+              if (passedTotalAmount) {
+                if (totalQuantity >= 6) {
+                  deliveryFee = additionalCost + vehicle3Fee;
+                  subtotal =
+                    parseFloat(passedTotalAmount) +
+                    parseFloat(deliveryFee); 
+                 
+                  console.log("newdeliveryAddtoStoreLocation is > to store loaction-->Passed total amount-->Qty is > 6 up", passedTotalAmount);
+                  console.log("newdeliveryAddtoStoreLocation is > to store loaction-->Delivery fee-->Qty is > 6 up", deliveryFee);
+                  console.log("newdeliveryAddtoStoreLocation is > to store loaction-->Subtotal-->Qty is > 6 up", subtotal);
+                  //  setvehicleFeeSaveToDb(vehicle3Fee);
+                  if (!isNaN(subtotal)) {
+                    setNewDeliveryFee(subtotal.toFixed(2));
+                  } else {
+                    //setTotalAmount("Total Amount");
+                  }
+                } else if (totalQuantity >= 2 && totalQuantity <= 5) {
+                  deliveryFee = additionalCost + vehicle2Fee;
+                  subtotal =
+                    parseFloat(passedTotalAmount) +
+                    parseFloat(deliveryFee); 
+                 
+                  console.log("newdeliveryAddtoStoreLocation is > to store loaction-->Passed total amount-->Qty is >=2", passedTotalAmount);
+                  console.log("newdeliveryAddtoStoreLocation is > to store loaction-->Delivery fee-->Qty is >=2", deliveryFee);
+                  console.log("newdeliveryAddtoStoreLocation is > to store loaction-->Subtotal-->Qty is >=2", subtotal);
+                  //  setvehicleFeeSaveToDb(vehicle2Fee);
+                  //alert(`Quantities-->${totalQuantity} and the fee is ${vehicle2Fee}`)
+                  console.log("qty >= 2", subtotal);
+                  if (!isNaN(subtotal)) {
+                    setNewDeliveryFee(subtotal.toFixed(2));
+                  } else {
+                    //setTotalAmount("Total Amount");
+                  }
+                } else {
+                  deliveryFee = additionalCost + vehicle1Fee;
+                  subtotal =
+                    parseFloat(passedTotalAmount) +
+                    parseFloat(deliveryFee); 
+                 
+                  console.log("newdeliveryAddtoStoreLocation is > to store loaction-->Passed total amount-->Qty is 1", passedTotalAmount);
+                  console.log("newdeliveryAddtoStoreLocation is > to store loaction-->Delivery fee-->Qty is 1", deliveryFee);
+                  console.log("newdeliveryAddtoStoreLocation is > to store loaction-->Subtotal-->Qty is 1", subtotal);
+                
+                  if (!isNaN(subtotal)) {
+                    setNewDeliveryFee(subtotal.toFixed(2));
+                  } else {
+                    //setTotalAmount("Total Amount");
+                  }
+                }
+
+                Alert.alert("Delivery address confirmed", "Thank you", [
+                  {
+
+                    text: "OK",
+                    onPress: () => {
+                      console.log(
+                        "Delivery Address Screen--->>send to cart screen-->subtotal",
+                        subtotal
+                      );
+                    
+                      // console.log("new delivery add",passedTotalAmount,FinalTotalAmount)
+                      navigation.navigate("CartScreen", {
+                        combinedData,
+                        extractedDatas,
+                        selectedItem,
+                        deliveryAddressOption,
+                        passedTotalAmount:
+                          parseFloat(passedTotalAmount) ||
+                         
+                          parseFloat(subtotal),
+                        rewardScreenNewModeOfPayment,
+                        selectedpaymenthod,
+                        selectedReserveDeliveryType,
+                        newDeliveryFee: deliveryFee || null,
+                        updateTotalAmount_NewDeliveryScreen:parseFloat(subtotal).toFixed(2)
+                      });
+                    },
+                  },
+                ]);
+              }
+            } else {
+              //if the new delivery address is less than to the set of admin
+              let subtotal = 0;
+              if (passedTotalAmount) {
+                if (totalQuantity >= 6) {
+                  //deliveryFee = additionalCost + vehicle3Fee;
+                  subtotal =
+                    parseFloat(passedTotalAmount) +
+                    parseFloat(vehicle3Fee); 
+                 
+                    console.log("newdeliveryAddtoStoreLocation is  < to store loaction-->Passed total amount-->Qty is 6 up", passedTotalAmount);
+                   
+                    console.log("newdeliveryAddtoStoreLocation is <   to store loaction-->Subtotal-->Qty is 6 up", subtotal);
+                  //  setvehicleFeeSaveToDb(vehicle3Fee);
+                  if (!isNaN(subtotal)) {
+                    setNewDeliveryFee(subtotal.toFixed(2));
+                  } else {
+                    //setTotalAmount("Total Amount");
+                  }
+                } else if (totalQuantity >= 2 && totalQuantity <= 5) {
+                 // deliveryFee = additionalCost + vehicle2Fee;
+                  //subtotal = additionalCost + vehicle2Fee; //total amount is added by the fee of the vehicle
+                  subtotal =
+                  parseFloat(passedTotalAmount) +
+                  parseFloat(vehicle2Fee); 
+               
+                  console.log("newdeliveryAddtoStoreLocation is  < to store loaction-->Passed total amount-->Qty is >= 2 ", passedTotalAmount);
+                 
+                  console.log("newdeliveryAddtoStoreLocation is <   to store loaction-->Subtotal-->Qty is >= 2 ", subtotal)
+                  console.log("qty >= 2", subtotal);
+                  if (!isNaN(subtotal)) {
+                    setNewDeliveryFee(subtotal.toFixed(2));
+                  } else {
+                    //setTotalAmount("Total Amount");
+                  }
+                } else {
+                  // deliveryFee = additionalCost + vehicle1Fee;
+                  subtotal =
+                    parseFloat(passedTotalAmount) +
+                    parseFloat(vehicle1Fee); 
+                 
+                    console.log("newdeliveryAddtoStoreLocation is  < to store loaction-->Passed total amount-->Qty is 1", passedTotalAmount);
+                    
+                    console.log("newdeliveryAddtoStoreLocation is <   to store loaction-->Subtotal-->Qty is 1", subtotal);
+                
+                  if (!isNaN(subtotal)) {
+                    setNewDeliveryFee(subtotal.toFixed(2));
+                  } else {
+                    //setTotalAmount("Total Amount");
+                  }
+                }
+
+                Alert.alert("Delivery address confirmed", "Thank you", [
+                  {
+
+                    text: "OK",
+                    onPress: () => {
+                      console.log(
+                        "Delivery Address Screen--->>send to cart screen",
+                        subtotal
+                      );
+                      // console.log("new delivery add",passedTotalAmount,FinalTotalAmount)
+                      navigation.navigate("CartScreen", {
+                        combinedData,
+                        extractedDatas,
+                        selectedItem,
+                        deliveryAddressOption,
+                        passedTotalAmount:
+                          parseFloat(passedTotalAmount) ||
+                         
+                          parseFloat(subtotal),
+                        rewardScreenNewModeOfPayment,
+                        selectedpaymenthod,
+                        selectedReserveDeliveryType,
+                        newDeliveryFee: deliveryFee || null,
+                      });
+                    },
+                  },
+                ]);
+              }
+            }
+          }
+          //get the distance between customer and store location using the API
+        } else {
+         // console.log("The delivery fee from Cart screen is 0");
+        }
       }
     }
   };
@@ -185,6 +435,44 @@ export default function NewDeliveryAddressScreen({ navigation }) {
   };
   console.log("line 101", combinedData);
   const [showLandmark, setShowLandmark] = useState(false);
+
+  //console.log("line 206",tempDeliveryFee);
+
+  useLayoutEffect(() => {
+    //get the distance between customer and store location using the API
+    //  const dynamicDistance = getDistance(
+    //   { latitude: newDeliveryAddressLatitude, longitude: newDeliveryAddressLongitude },
+    //   { latitude: adminLatt, longitude: adminLong }
+    // );
+    // const newdeliveryAddtoStoreLocation = dynamicDistance / 1000; //the result distance is by meter but I divide 1000 so it will result KM
+    // console.log("Distance from customer to store", newdeliveryAddtoStoreLocation)
+  }, [
+    adminLatt,
+    adminLong,
+    newDeliveryAddressLatitude,
+    newDeliveryAddressLongitude,
+    tempDeliveryFee,
+  ]);
+  const calculateDistance_StoreToNewDeliveryadd = (
+    newDeliveryAddressLatitude,
+    newDeliveryAddressLongitude
+  ) => {
+    console.log("The admin lat is ", adminLatt);
+    //get the distance between store and receiver new delivery address for customer
+    const dynamicDistance = getDistance(
+      {
+        latitude: newDeliveryAddressLatitude,
+        longitude: newDeliveryAddressLongitude,
+      },
+      { latitude: adminLatt, longitude: adminLong }
+    );
+    const newdeliveryAddtoStoreLocation = dynamicDistance / 1000; //the result distance is by meter but I divide 1000 so it will result KM
+    console.log(
+      "Distance from customer to store",
+      newdeliveryAddtoStoreLocation
+    );
+  };
+
   return (
     <TouchableWithoutFeedback
       onPress={() => {
@@ -294,7 +582,7 @@ export default function NewDeliveryAddressScreen({ navigation }) {
                         ? "black"
                         : "gray"
                     }
-                    keyboardType="default"
+                    keyboardType="numeric"
                     editable={
                       deliveryAddressOption === "New Delivery Address"
                         ? true
@@ -365,13 +653,13 @@ export default function NewDeliveryAddressScreen({ navigation }) {
                       }}
                       onPress={(data, details = null) => {
                         const { formatted_address, geometry } = details;
-                        const {description}=data;
+                        const { description } = data;
                         const { lat, lng } = geometry.location;
                         //console.log("line 357", description);
                         //console.log("line 329", details);
                         setShowLandmark(true);
-                      //  setnewDeliveryAddress(formatted_address);
-                      setnewDeliveryAddress(description);
+                        //  setnewDeliveryAddress(formatted_address);
+                        setnewDeliveryAddress(description);
                         setnewDeliveryAddressaLatitude(lat);
                         setnewDeliveryAddressaLongitude(lng);
                       }}
@@ -426,18 +714,7 @@ export default function NewDeliveryAddressScreen({ navigation }) {
                 </View>
               )}
             </View>
-            <TouchableOpacity
-              // onPress={()=>{
-              //   navigation.navigate("toProductDetailsAndOrderScreen", {
-              //                 combinedData,
-              //                 extractedDatas,
-              //                 item,
-              //               });
-              // }}
-              onPress={handleSubmit}
-              //disabled={!textinput_Feedback || !ratings}
-              //disabled={buttonDisable}
-            >
+            <TouchableOpacity onPress={handleSubmit}>
               <View
                 style={{
                   borderRadius: 10,
@@ -496,7 +773,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   viewwatername: {
-   // backgroundColor: "yellow",
+    // backgroundColor: "yellow",
     width: 180,
     justifyContent: "center",
   },

@@ -6,7 +6,10 @@ import {
   TouchableOpacity,
   Image,
   SafeAreaView,
+
   ScrollView,
+
+
   ToastAndroid,
 } from "react-native";
 import { db } from "../firebaseConfig";
@@ -23,6 +26,7 @@ import { useNavigation } from "@react-navigation/native";
 import { Fontisto } from "@expo/vector-icons";
 import moment from "moment";
 import { NotificationContext } from "../shared/NotificationContext";
+
 
 export default function NotificationScreen() {
   const [readNotifications, setReadNotifications] = useState([]);
@@ -59,6 +63,7 @@ export default function NotificationScreen() {
                   id: key,
                   ...data[key],
                 }))
+
                 .filter((notification) => notification.receiver === "Customer");
 
               // console.log("NotifInformation:", NotifInformation);
@@ -81,6 +86,7 @@ export default function NotificationScreen() {
               );
               // console.log("SortedNotifications:", sortedNotifications); // Add this line
               setNotifications(sortedNotifications);
+
 
               setReadNotifications(
                 NotifInformation.filter(
@@ -117,11 +123,14 @@ export default function NotificationScreen() {
     return () => clearInterval(intervalId);
   }, []);
   const [notifications, setNotifications] = useState([]);
+
   // console.log("Notification:", notifications);
+
 
   const displayScheduledNotificationsAsToasts = (scheduledNotifications) => {
     scheduledNotifications.forEach((notification) => {
       const currentDate = new Date();
+
       //console.log("CURRENT:", currentDate);
       const scheduledSentDate = new Date(notification.scheduledSent);
       // console.log("Sched date:", scheduledSentDate);
@@ -134,6 +143,7 @@ export default function NotificationScreen() {
           0,
           200 // Adjust the Y offset as needed
         );
+
       }
     });
   };
@@ -145,6 +155,7 @@ export default function NotificationScreen() {
   //     const scheduledSentDate = new Date(notification.scheduledSent);
   //     console.log("Sched date:", scheduledSentDate);
 
+
   //     if (currentDate >= scheduledSentDate) {
   //       // Display the custom toast
   //       console.log(1232);
@@ -153,6 +164,7 @@ export default function NotificationScreen() {
   //   });
   // };
 
+  
   const handleNotificationPress = async (notification) => {
     if (notification.status === "unread") {
       const notificationRef = ref(db, `NOTIFICATION/${notification.id}`);
@@ -174,7 +186,6 @@ export default function NotificationScreen() {
       console.log("Notification does not have an orderID property.");
     }
   };
-
   const handleClickMarkAll = async () => {
     // Update the status of all unread notifications to "read"
     const customerData = JSON.parse(await AsyncStorage.getItem("customerData"));
@@ -280,42 +291,40 @@ export default function NotificationScreen() {
           </TouchableOpacity>
         </View>
         {notifications
+
           .filter((notification) => notification.title !== "Order Reminder")
+
           .map((notification) => (
             <View
               key={notification.id}
               style={[
                 styles.notification,
+
                 readNotifications.includes(notification.id) &&
                   styles.readNotification,
+
               ]}
             >
               <TouchableOpacity
                 onPress={
-                  notification.status === "read"
-                    ? () => {}
-                    : () => handleNotificationPress(notification)
+                  notification.status === 'read' ? () => {} : () => handleNotificationPress(notification)
                 }
               >
                 <Text
                   style={[
                     styles.text,
-                    notification.status === "unread" && styles.unreadText,
-                    notification.status === "read" && styles.readText,
+                    notification.status === 'unread' && styles.unreadText,
+                    notification.status === 'read' && styles.readText,
                   ]}
                 >
-                  {moment(notification.notificationDate).format(
-                    "MMMM Do YYYY, h:mm:ss a"
-                  )}
+                  {moment(notification.notificationDate).format('MMMM Do YYYY, h:mm:ss a')}
                 </Text>
               </TouchableOpacity>
-              <View style={{ flexDirection: "row" }}>
+              <View style={{ flexDirection: 'row' }}>
                 <View style={styles.imageContainer}>
-                  <Image
-                    source={require("../assets/storeNoBG.png")}
-                    style={styles.image}
-                  />
+                  <Image source={require('../assets/storeNoBG.png')} style={styles.image} />
                 </View>
+
                 <View
                   style={{
                     top: 5,
@@ -324,6 +333,7 @@ export default function NotificationScreen() {
                     alignItems: "center",
                   }}
                 >
+
                   <Text style={styles.text2}>{notification.body}</Text>
                 </View>
               </View>
@@ -336,6 +346,7 @@ export default function NotificationScreen() {
             </View>
           ))}
       </ScrollView>
+
     ) : (
       <View>
         <Text>No Notification</Text>
@@ -346,6 +357,7 @@ export default function NotificationScreen() {
 
     
 }
+
 
 const styles = StyleSheet.create({
   container: {
