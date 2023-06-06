@@ -166,7 +166,7 @@ export default function LoginModule({ navigation, route }) {
     };
     try {
       await set(logRef, logData);
-      console.log("New:", newUserLog);
+     // console.log("New:", newUserLog);
     } catch (error) {
       console.log(error);
       alert("Error saving data: ", error);

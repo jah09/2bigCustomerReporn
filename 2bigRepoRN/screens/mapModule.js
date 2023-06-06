@@ -229,7 +229,7 @@ export default function MapModule({}) {
       }
       let location = await Location.getCurrentPositionAsync({});
       if (isMounted) {
-        console.log("User current location", location);
+        //console.log("User current location", location);
 
         setLocation(location);
         setMarkerPosition({
@@ -254,7 +254,7 @@ export default function MapModule({}) {
 
             // Modify the address string to include the street name
             address = address.replace("Cebu City", streetName + " Cebu City");
-            console.log("Modified address:", address);
+          //  console.log("Modified address:", address);
             setTitle(address);
           })
           .catch((error) => console.warn(error));

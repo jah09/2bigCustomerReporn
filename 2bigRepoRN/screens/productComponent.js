@@ -350,7 +350,7 @@ export default function ProductComponent() {
     }
   };
   const [input_SwapWithReservation, setinput_SwapWithReservation] = useState();
-  const [input_PickupRequest, setinput_PickupRequest] = useState();
+  const [input_PickupRequest, setinput_PickupRequest] = useState("");
 
   //compute the total pick up fee
   useLayoutEffect(() => {
@@ -627,13 +627,15 @@ export default function ProductComponent() {
                       { fontSize: 15 },
                     ]}
                     keyboardType="numeric"
-                    onChangeText={(text) => setinput_PickupRequest(text)}
+                    onChangeText={(text) => setinput_PickupRequest(text.replace(/[^0-9]/g,''))}
+                    value={input_PickupRequest}
                   />
                 </View>
               )}
             </View>
             {/* Submit button */}
             <View
+            
               style={{
                // backgroundColor: "red",
                 marginTop: 10,

@@ -11,6 +11,7 @@ import CartScreen from '../screens/CartScreen';
 import RewardScreen from '../screens/RewardScreen';
 import RatingScreen from '../screens/ReviewRatingScreen';
 import MapScreenforDelivery from '../screens/MapForDelivery';
+import DeliveredOrdersScreen from "../screens/DeliveredOrdersScreen";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 const Stack = createNativeStackNavigator(); // creates object for Stack Navigator
 const FirstScreenNavigator = () => {
@@ -21,6 +22,7 @@ const FirstScreenNavigator = () => {
         <Stack.Screen name="Orders" component={OrderScreen} />
         {/* <Stack.Screen name="MapsNested" component={MapScreen} />  */}
         <Stack.Screen name="MapScreenforDelivery" component={MapScreenforDelivery} />
+        <Stack.Screen name="DeliveredOrdersScreen" component={DeliveredOrdersScreen} />
       </Stack.Navigator>
     );
   };
