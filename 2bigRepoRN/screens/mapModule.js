@@ -343,24 +343,24 @@ export default function MapModule({}) {
   }, []);
 
   //update customer COllection with latlong
-  useEffect(() => {
-    if (!customerID || !location || !location.coords || !title) {
-      return;
-    }
-    const customerRef = ref(db, "CUSTOMER/");
-    const cusRef = child(customerRef, customerID.toString());
-    update(cusRef, {
-      lattitudeLocation: location.coords.latitude,
-      longitudeLocation: location.coords.longitude,
-      address: title,
-    })
-      .then(() => {
-        //console.log("Customer Collection--> Latlong-->Update Success");
-      })
-      .catch((error) => {
-        console.log("Error updating", error);
-      });
-  }, [customerID, location, title]);
+  // useEffect(() => {
+  //   if (!customerID || !location || !location.coords || !title) {
+  //     return;
+  //   }
+  //   const customerRef = ref(db, "CUSTOMER/");
+  //   const cusRef = child(customerRef, customerID.toString());
+  //   update(cusRef, {
+  //     lattitudeLocation: location.coords.latitude,
+  //     longitudeLocation: location.coords.longitude,
+  //     address: title,
+  //   })
+  //     .then(() => {
+  //       //console.log("Customer Collection--> Latlong-->Update Success");
+  //     })
+  //     .catch((error) => {
+  //       console.log("Error updating", error);
+  //     });
+  // }, [customerID, location, title]);
 
   const CustomCallout = ({ title }) => {
     return (

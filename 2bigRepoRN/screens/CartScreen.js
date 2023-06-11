@@ -48,7 +48,8 @@ import {
   responsiveHeight,
   responsiveWidth,
 } from "react-native-responsive-dimensions";
-
+import { createErrorHandler } from "expo/build/errors/ExpoErrorManager";
+import { StylesRewardsPoints } from "../ForStyle/StylesforRewardsPoint";
 export default function CartScreen() {
   const route = useRoute();
   const navigation = useNavigation();
@@ -67,36 +68,30 @@ export default function CartScreen() {
     selectedSwaption,
     rewardScreenNewModeOfPayment,
     newDeliveryFee,
-    updateTotalAmount_NewDeliveryScreen
+    passedTotalAmount_NewDeliveryScreen,
   } = route.params ? route.params : {};
   const passedStationName =
     extractedDatas?.refillingStoreProperties?.stationName;
   const passedAdminID = extractedDatas?.adminProperties?.adminID;
   const passedStationStatus =
     extractedDatas?.refillingStoreProperties?.stationStatus;
-  console.log("line 70",passedTotalAmount);
+
   const secondItem = item;
- 
-  useEffect(() => {
-    if (passedTotalAmount !== null) {
-      //setFinalTotalAmount(passedTotalAmount);
-      //setTotalAmount(passedTotalAmount);
+  //setFinalTotalAmount(passedTotalAmount);
+
+  console.log(
+    "RECEIVING CART SCREEN from new  delivery screen--->Total Fee",
+    passedTotalAmount_NewDeliveryScreen
+  );
+  useLayoutEffect(() => {
+    if (
+      passedTotalAmount_NewDeliveryScreen !== null &&
+      passedTotalAmount_NewDeliveryScreen !== undefined
+    ) {
+      setFinalTotalAmount(passedTotalAmount_NewDeliveryScreen);
+      setTotalAmount(passedTotalAmount_NewDeliveryScreen);
     }
-    
-
-
-    // if(updateTotalAmount_NewDeliveryScreen!==null){
-    //   setFinalTotalAmount(0);
-    //   setTotalAmount(0);
-    //   setTotalAmount(updateTotalAmount_NewDeliveryScreen);
-    //   setFinalTotalAmount(updateTotalAmount_NewDeliveryScreen);
-    // }
-
-  }, [passedTotalAmount,updateTotalAmount_NewDeliveryScreen]);
- 
-
-  console.log("RECEIVING CART SCREEN --->Total Fee",updateTotalAmount_NewDeliveryScreen);
-  // console.log("RECEIVING CART SCREEN --->Selected Item",selectedItem);
+  }, [passedTotalAmount_NewDeliveryScreen]);
 
   // console.log(
   //   "RECEIVING CART SCREEN --->Selected Swap Option and value ",
@@ -117,28 +112,55 @@ export default function CartScreen() {
     navigation.goBack();
   };
 
-  //get customer Data
-  useLayoutEffect(() => {
+  // //get customer Data
+  useEffect(() => {
     AsyncStorage.getItem("customerData") //e get ang Asycn sa login screen
       .then((data) => {
         if (data !== null) {
           //if data is not null
           const parsedData = JSON.parse(data); //then e store ang Data into parsedData
-          setCustomerData(parsedData); //passed the parsedData to customerDta
-          //console.log("Customer Data",parsedData);
           const CustomerUID = parsedData.cusId;
-          //console.log("line 103--->Rewards Data",passedRewardsData);
+       
           setCustomerID(CustomerUID);
         }
       })
       .catch((error) => {
         console.log(error);
-        alert("Error fetching data: ", error);
+        alert("Error fetching data: aSYNC", error);
       });
   }, []);
+  useEffect(() => {
+    // console.log("Line 58", customerID);
+    if (customerID) {
+      const customerRef = ref(db, "CUSTOMER/");
+      //  console.log("inside this effect",customerID)
+      const customerQuery = query(
+        customerRef,
+        orderByChild("cusId"),
+        equalTo(customerID)
+      );
+      onValue(customerQuery, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          const newCustomerInfo = Object.keys(data).map((key) => ({
+            id: key,
+            StoreImage: data[key].StoreImage,
+            ...data[key],
+          }));
+          const customer = newCustomerInfo[0];
+          const walletPoints = customer.walletPoints;
+          // Update the state with the new wallet points
+          setcustomerRewardsPoints(walletPoints);
+          console.log("Current rewards points of cstomer",walletPoints)
+          setCustomerData(newCustomerInfo);
+        }
+      });
+    }
+  }, [customerID]);
+
   const [customerData, setCustomerData] = useState({}); //getting the customer's data from AsyncStorage
   const [customerID, setCustomerID] = useState();
-
+  const [customerRewardsPoints, setcustomerRewardsPoints] = useState(0); //object
   //codees for quantity and get the initial amount-----------------------------------------------------------------------
 
   const [count, setCount] = useState({});
@@ -243,11 +265,13 @@ export default function CartScreen() {
   const [newDeliveryDetails, setnewDeliveryDetails] = useState(
     paramnewDeliveryDetails
   );
- 
-  const neworderTypes = newDeliveryDetails?.[0].orderTypes.split(", ");
+  // console.log("RECEIVING CART SCREEN --->Selected Item",newDeliveryDetails);
+  // const neworderTypes = newDeliveryDetails?.[0].orderTypes.split(", ");
+  //const neworderTypes = newDeliveryDetails?.[0].orderTypes.split(/,\s*/); // Split by comma followed by optional space
+  const neworderTypes = newDeliveryDetails?.[0].orderTypes
+    .split(",")
+    .map((orderType) => orderType.trim());
 
-  const [newOrder_Type, setnewOrder_Type] = useState();
-  // console.log("line 93",newOrder_Type)
   const orderTypes = [];
   const newOrderTypes = useCallback(() => {
     if (neworderTypes && neworderTypes[0]) {
@@ -257,11 +281,29 @@ export default function CartScreen() {
           value: orderType.toString(),
           key: index + 1,
         };
+
         orderTypes.push(deliveryType);
       });
     }
     return orderTypes;
   }, [newDeliveryDetails]);
+
+  const [newOrder_Type, setnewOrder_Type] = useState();
+  // console.log("line 93",newOrder_Type)
+  // const orderTypes = [];
+  // const newOrderTypes = useCallback(() => {
+  //   if (splittedOrderTypes && splittedOrderTypes[0]) {
+  //     splittedOrderTypes.forEach((orderType, index) => {
+  //       const deliveryType = {
+  //         label: orderType,
+  //         value: orderType.toString(),
+  //         key: index + 1,
+  //       };
+  //       orderTypes.push(deliveryType);
+  //     });
+  //   }
+  //   return orderTypes;
+  // }, [newDeliveryDetails]);
 
   useLayoutEffect(() => {
     const orderTypes = newOrderTypes();
@@ -277,28 +319,65 @@ export default function CartScreen() {
     useState(null);
   useLayoutEffect(() => {
     if (newDeliveryDetails) {
+      const vechicle1Name =
+        newDeliveryDetails &&
+        Array.isArray(newDeliveryDetails) &&
+        newDeliveryDetails.length > 0
+          ? newDeliveryDetails[0].vehicle1Name
+          : null;
       const vehicle1Fee =
         newDeliveryDetails &&
         Array.isArray(newDeliveryDetails) &&
         newDeliveryDetails.length > 0
           ? parseFloat(newDeliveryDetails[0].vehicle1Fee)
           : null;
+      const vehicle1MinQty =
+        newDeliveryDetails &&
+        Array.isArray(newDeliveryDetails) &&
+        newDeliveryDetails.length > 0
+          ? parseFloat(newDeliveryDetails[0].vehicle1MinQty)
+          : null;
+      const vehicle1MaxQty =
+        newDeliveryDetails &&
+        Array.isArray(newDeliveryDetails) &&
+        newDeliveryDetails.length > 0
+          ? parseFloat(newDeliveryDetails[0].vehicle1MaxQty)
+          : null;
+      setvehicle1MinQty(vehicle1MinQty);
+      setvehicle1MaxQty(vehicle1MaxQty);
       setvechicle1fee(vehicle1Fee);
-      const vehicle2Name =
+      setVehicle1Name(vechicle1Name);
+      console.log("line 335", vechicle1Name);
+      const vechicle2Name =
         newDeliveryDetails &&
         Array.isArray(newDeliveryDetails) &&
         newDeliveryDetails.length > 0
           ? newDeliveryDetails[0].vehicle2Name
           : null;
-
       const vehicle2Fee =
         newDeliveryDetails &&
         Array.isArray(newDeliveryDetails) &&
         newDeliveryDetails.length > 0
           ? parseFloat(newDeliveryDetails[0].vehicle2Fee)
           : null;
+      const vehicle2MinQty =
+        newDeliveryDetails &&
+        Array.isArray(newDeliveryDetails) &&
+        newDeliveryDetails.length > 0
+          ? parseFloat(newDeliveryDetails[0].vehicle2MinQty)
+          : null;
+      const vehicle2MaxQty =
+        newDeliveryDetails &&
+        Array.isArray(newDeliveryDetails) &&
+        newDeliveryDetails.length > 0
+          ? parseFloat(newDeliveryDetails[0].vehicle2MaxQty)
+          : null;
+      setVehicle2Name(vechicle2Name);
       setvechicle2fee(vehicle2Fee);
-      const vehicle3Name =
+      setvehicle2MinQty(vehicle2MinQty);
+      setvehicle2MaxQty(vehicle2MaxQty);
+
+      const vechicle3Name =
         newDeliveryDetails &&
         Array.isArray(newDeliveryDetails) &&
         newDeliveryDetails.length > 0
@@ -310,13 +389,73 @@ export default function CartScreen() {
         newDeliveryDetails.length > 0
           ? parseFloat(newDeliveryDetails[0].vehicle3Fee)
           : null;
+      const vehicle3MinQty =
+        newDeliveryDetails &&
+        Array.isArray(newDeliveryDetails) &&
+        newDeliveryDetails.length > 0
+          ? parseFloat(newDeliveryDetails[0].vehicle3MinQty)
+          : null;
+      const vehicle3MaxQty =
+        newDeliveryDetails &&
+        Array.isArray(newDeliveryDetails) &&
+        newDeliveryDetails.length > 0
+          ? parseFloat(newDeliveryDetails[0].vehicle3MaxQty)
+          : null;
+      setVehicle3Name(vechicle3Name);
       setvechicle3fee(vehicle3Fee);
-      console.log("lne 298", vehicle3Fee);
+      setvehicle3MinQty(vehicle3MinQty);
+      setvehicle3MaxQty(vehicle3MaxQty);
+
+      const vechicle4Name =
+        newDeliveryDetails &&
+        Array.isArray(newDeliveryDetails) &&
+        newDeliveryDetails.length > 0
+          ? newDeliveryDetails[0].vehicle4Name
+          : null;
+      const vehicle4Fee =
+        newDeliveryDetails &&
+        Array.isArray(newDeliveryDetails) &&
+        newDeliveryDetails.length > 0
+          ? parseFloat(newDeliveryDetails[0].vehicle3Fee)
+          : null;
+
+      const vehicle4MinQty =
+        newDeliveryDetails &&
+        Array.isArray(newDeliveryDetails) &&
+        newDeliveryDetails.length > 0
+          ? parseFloat(newDeliveryDetails[0].vehicle4MinQty)
+          : null;
+      const vehicle4MaxQty =
+        newDeliveryDetails &&
+        Array.isArray(newDeliveryDetails) &&
+        newDeliveryDetails.length > 0
+          ? parseFloat(newDeliveryDetails[0].vehicle4MaxQty)
+          : null;
+      setVehicle4Name(vechicle4Name);
+      setvechicle4fee(vehicle4Fee);
+      setvehicle4MinQty(vehicle4MinQty);
+      setvehicle4MaxQty(vehicle4MaxQty);
     }
   }, [newDeliveryDetails]);
+  const [vehicle1Name, setVehicle1Name] = useState();
   const [vechicle1fee, setvechicle1fee] = useState();
+  const [vehicle1MinQty, setvehicle1MinQty] = useState();
+  const [vehicle1MaxQty, setvehicle1MaxQty] = useState();
+
+  const [vehicle2Name, setVehicle2Name] = useState();
   const [vechicle2fee, setvechicle2fee] = useState();
+  const [vehicle2MinQty, setvehicle2MinQty] = useState();
+  const [vehicle2MaxQty, setvehicle2MaxQty] = useState();
+
+  const [vehicle3Name, setVehicle3Name] = useState();
   const [vechicle3fee, setvechicle3fee] = useState();
+  const [vehicle3MinQty, setvehicle3MinQty] = useState();
+  const [vehicle3MaxQty, setvehicle3MaxQty] = useState();
+
+  const [vehicle4Name, setVehicle4Name] = useState();
+  const [vechicle4fee, setvechicle4fee] = useState();
+  const [vehicle4MinQty, setvehicle4MinQty] = useState();
+  const [vehicle4MaxQty, setvehicle4MaxQty] = useState();
   // const [vehicleFee, setvehicleFee] = useState(0);
 
   const handleItemChecked_orderType = (item) => {
@@ -326,47 +465,77 @@ export default function CartScreen() {
       item.key === checkedItemKey_orderType ? null : item.key
     );
     if (item.value === "Delivery") {
-      // Alert.alert(
-      //   "Note",
-      //   `Standard Delivery: Your order will be delivered within the day.\n\nExpress Delivery: Your order will be delivered within a specific span of time.\n\nReservation Delivery: You will be the one to decide when to deliver the water.\n\nDelivery fee is base on your distance from store.\n\nVehicle fee is base on your overall quantities.\n\n₱${vechicle1fee.toFixed(
-      //     2
-      //   )} for 1 pc/s.\n₱${vechicle2fee.toFixed(
-      //     2
-      //   )} for 2-5 pc/s\n₱${vechicle3fee.toFixed(2)} for 6 and more.`
-      // ); \n₱${vechicle2fee.toFixed(2)} for 2-5 pc/s.
-      let alertMessage = `Standard Delivery: Your order will be delivered within the day.\n\nExpress Delivery: Your order will be delivered within a specific span of time.\n\nReservation Delivery: You will be the one to decide when to deliver the water.\n\nDelivery fee is based on your distance from the store.\n\nVehicle fee is based on your overall quantities.\n\n₱${vechicle1fee.toFixed(
-        2
-      )} for 1 pc/s.`;
-      if (vechicle2fee || !isNaN(vechicle2fee)) {
-        alertMessage += `\n₱${vechicle2fee.toFixed(2)} for 2-5 pc/s`;
-      } else if (vechicle3fee || !isNaN(vechicle3fee)) {
-        alertMessage += `\n₱${vechicle3fee.toFixed(2)} for 6 and more.`;
+      let alertMessage = `Standard Delivery: Your order will be delivered within the day.\n\nExpress Delivery: Your order will be delivered within a specific span of time.\n\nReservation Delivery: You will be the one to decide when to deliver the water.\n\nDelivery fee is based on your distance from the store.\n\nVehicle fee is based on your overall quantities.\n\n`;
+
+      if (vechicle1fee || (!isNaN(vechicle1fee) && vehicle1Name !== "")) {
+        // alertMessage += `\n<Text style={{ fontWeight: 'bold' }}>{vehicle1Name}</Text>- ₱${vechicle1fee.toFixed(
+        //   2
+        // )} for ${vehicle1MinQty}-${vehicle1MaxQty} pc/s.`;
+        alertMessage += `\n${vehicle1Name}- ₱${vechicle1fee.toFixed(
+          2
+        )} for ${vehicle1MinQty}-${vehicle1MaxQty} pc/s.`;
       }
+      if (vechicle2fee || (!isNaN(vechicle2fee) && vehicle2Name !== "")) {
+        alertMessage += `\n${vehicle2Name}- ₱${vechicle2fee.toFixed(
+          2
+        )} for ${vehicle2MinQty}-${vehicle2MaxQty} pc/s.`;
+      }
+      if (vechicle3fee || (!isNaN(vechicle3fee) && vehicle3Name !== "")) {
+        alertMessage += `\n${vehicle3Name}- ₱${vechicle3fee.toFixed(
+          2
+        )} for ${vehicle3MinQty}-${vehicle3MaxQty} pc/s.`;
+      }
+      // if (vechicle4fee || !isNaN(vechicle4fee) ||vechicle4fee) {
+      //   alertMessage += `\n${vehicle4Name}- ₱${vechicle4fee.toFixed(
+      //     2
+      //   )} for ${vehicle4MinQty}-${vehicle4MaxQty} pc/s.`;
+      // }
+      if ((vechicle4fee || !isNaN(vechicle4fee)) && vehicle4Name !== "") {
+        alertMessage += `\n${vehicle4Name}- ₱${vechicle4fee.toFixed(
+          2
+        )} for ${vehicle4MinQty}-${vehicle4MaxQty} pc/s.`;
+      }
+
       Alert.alert("Note", alertMessage);
       const deliveryTypeholder = [];
-      const { stanDeliverytype, exDeliveryType, resDeliveryType } =
-        newDeliveryDetails[0];
-      //stanDeliverytype
-      const ValuesDeliveryType = [
+      const {
         stanDeliverytype,
         exDeliveryType,
         resDeliveryType,
+        expressID,
+        standardID,
+        reservationID,
+      } = newDeliveryDetails[0];
+      //stanDeliverytype
+      const ValuesDeliveryType = [
+        // stanDeliverytype,
+        // exDeliveryType,
+        // resDeliveryType,
+        { id: expressID, value: exDeliveryType },
+        { id: standardID, value: stanDeliverytype },
+        { id: reservationID, value: resDeliveryType },
       ];
-      ValuesDeliveryType.forEach((value, index) => {
-        const delivryType = {
-          label: value,
-          value: value ? value.toString() : "",
-          key: index + 1,
-        };
+      //  console.log("line 385", ValuesDeliveryType);
+      ValuesDeliveryType.forEach((deliveryType, index) => {
+        if (deliveryType.value !== 0 && deliveryType.id !== 0) {
+          const delivryType = {
+            // label: deliveryType.value,
+            // value: deliveryType ? value.toString() : "",
+            // key: index + 1,
+            label: deliveryType.value, // Access the value property within deliveryType.value
+            value: deliveryType.value ? deliveryType.value.toString() : "",
+            key: index + 1,
+          };
+          //  console.log("line 389", delivryType);
+          deliveryTypeholder.push(delivryType);
 
-        deliveryTypeholder.push(delivryType);
+          setDeliveryTypes(deliveryTypeholder);
+          const filteredDeliveryTypes = deliveryTypeholder.filter((type) => {
+            return type.value === "Standard" || type.value === "Express";
+          });
 
-        setDeliveryTypes(deliveryTypeholder);
-        const filteredDeliveryTypes = deliveryTypeholder.filter((type) => {
-          return type.value === "Standard" || type.value === "Express";
-        });
-
-        setreservationDeliveryTypes(filteredDeliveryTypes);
+          setreservationDeliveryTypes(filteredDeliveryTypes);
+        }
       });
       setText("Reservation Date");
     } else {
@@ -376,31 +545,39 @@ export default function CartScreen() {
       setCheckedItemKey_paymentMethod(null);
       console.log("pick up is press");
       const deliveryTypeholder = [];
-      const { stanDeliverytype, exDeliveryType, resDeliveryType } =
-        newDeliveryDetails[0];
-      const ValuesDeliveryType = [
+      const {
         stanDeliverytype,
         exDeliveryType,
         resDeliveryType,
+        expressID,
+        standardID,
+        reservationID,
+      } = newDeliveryDetails[0];
+      const ValuesDeliveryType = [
+        { id: expressID, value: exDeliveryType },
+        { id: standardID, value: stanDeliverytype },
+        { id: reservationID, value: resDeliveryType },
       ];
 
-      ValuesDeliveryType.forEach((value, index) => {
-        const delivryType = {
-          label: value,
-          value: value.toString(),
-          key: index + 1,
-        };
+      ValuesDeliveryType.forEach((deliveryType, index) => {
+        if (deliveryType.value !== 0 && deliveryType.id !== 0) {
+          const delivryType = {
+            label: deliveryType.value,
+            value: deliveryType.value ? deliveryType.value.toString() : "",
+            key: index + 1,
+          };
 
-        deliveryTypeholder.push(delivryType);
+          deliveryTypeholder.push(delivryType);
 
-        setDeliveryTypes(deliveryTypeholder);
+          setDeliveryTypes(deliveryTypeholder);
 
-        //filter the deliveryTypeholder, standard and express only
-        const filteredDeliveryTypes = deliveryTypeholder.filter((type) => {
-          return type.value === "Standard" || type.value === "Express";
-        });
+          //filter the deliveryTypeholder, standard and express only
+          const filteredDeliveryTypes = deliveryTypeholder.filter((type) => {
+            return type.value === "Standard" || type.value === "Express";
+          });
 
-        setreservationDeliveryTypes(filteredDeliveryTypes);
+          setreservationDeliveryTypes(filteredDeliveryTypes);
+        } //end here
       });
     }
   };
@@ -455,7 +632,7 @@ export default function CartScreen() {
   const [reservationDeliveryTypes, setreservationDeliveryTypes] = useState();
   const [selectedReserveDeliveryType, setselectedReserveDeliveryType] =
     useState();
-  console.log("434", selectedReserveDeliveryType);
+  // console.log("434", selectedReserveDeliveryType);
   const [
     checkedItemKey_reservationDeliveryTypes,
     setcheckedItemKey_reservationDeliveryTypes,
@@ -538,31 +715,38 @@ export default function CartScreen() {
       item.key === checkedItemKey_paymentMethod ? null : item.key
     );
     if (item.value === "CashOnDelivery") {
-     
     } else if (item.value === "Gcash") {
       // setShowModal_ModeOfPayment(true);
-    } else {
+    } else if (item.value === "Points") {
+      //const  rewardpointsBalance= customerData&& customerData.walletPoints;
+      Alert.alert(
+        "Points Balance",
+        `You have ${customerRewardsPoints} rewards points in your wallet.`
+      );
       // if(totalInitialAmount===0 || totalInitialAmount===0.00){
       //   Alert.alert("Warning","Initial amount must not be a 0.");
       // }else{
-      navigation.navigate("RewardScreen", {
-        passedStationName,
-        selectedOrdertype,
-        secondItem,
-        extractedDatas,
-        FinalTotalAmount: parseFloat(FinalTotalAmount||updateTotalAmount_NewDeliveryScreen),
-        customerData,
-        selectedItem,
-        paymentMethods,
-        gcashNumber,
-      });
+      // console.log("Cart Screen---> send to Reward screen", FinalTotalAmount);
+      // navigation.navigate("RewardScreen", {
+      //   passedStationName,
+      //   selectedOrdertype,
+      //   secondItem,
+      //   extractedDatas,
+      //   FinalTotalAmount: parseFloat(
+      //     FinalTotalAmount || updateTotalAmount_NewDeliveryScreen
+      //   ),
+      //   customerData,
+      //   selectedItem,
+      //   paymentMethods,
+      //   gcashNumber,
+      // });
 
       //console.log("inside else",rewardsData);
     }
   };
 
   const [paymentMethods, setPaymentMethods] = useState([]);
-  // console.log("line 245", paymentMethods);
+  //console.log("line 245", paymentMethods);
   const gcashNumber = parseFloat(
     newDeliveryDetails &&
       Array.isArray(newDeliveryDetails) &&
@@ -572,13 +756,18 @@ export default function CartScreen() {
   );
 
   // console.log("line 91", gcashNumber);
-
+  //codes for payment method
   useLayoutEffect(() => {
     if (Array.isArray(newDeliveryDetails) && newDeliveryDetails.length > 0) {
-      const splitPaymentMethods =
-        (newDeliveryDetails &&
-          newDeliveryDetails[0]?.paymentMethods.split(", ")) ||
-        [];
+      // const splitPaymentMethods =
+      //   (newDeliveryDetails &&
+      //     newDeliveryDetails[0]?.paymentMethods.split(",")) ||
+      //   [];
+      const paymentMethodsString = newDeliveryDetails[0]?.paymentMethods || "";
+      // const splitPaymentMethods = paymentMethodsString.split(',');
+      const splitPaymentMethods = paymentMethodsString.split(/,\s*|\s*,\s*/);
+      // const splitPaymentMethods = (newDeliveryDetails[0]?.paymentMethods || "").split(",").map((method) => method.trim());
+
       // console.log("reserve line 154",splitPaymentMethods);
       const splitValuesOrderTypeArray = splitPaymentMethods.map(
         (type, index) => ({
@@ -587,6 +776,7 @@ export default function CartScreen() {
           key: index + 1,
         })
       );
+      //  console.log("reserve line 154",splitValuesOrderTypeArray);
       // Reorder the payment methods
       const reorderedPaymentMethods = [
         // Change the order here as desired
@@ -596,10 +786,19 @@ export default function CartScreen() {
           (method) => method.label === "CashOnDelivery"
         ),
       ].filter(Boolean);
-
+      // console.log("here line 684")
       //console.log("338",reorderedPaymentMethods)
-      setPaymentMethods(reorderedPaymentMethods);
+      // setPaymentMethods(reorderedPaymentMethods);
+      if (reorderedPaymentMethods.length > 0) {
+        setPaymentMethods(reorderedPaymentMethods);
+      } else {
+        // Handle the case when paymentMethods is null or empty
+        // You can set a default value or perform other actions
+        // For example:
+        setPaymentMethods([]);
+      }
     } else {
+      // console.log("here line 688")
       setPaymentMethods([]);
     }
   }, [newDeliveryDetails]);
@@ -645,10 +844,11 @@ export default function CartScreen() {
   const adminLong = parseFloat(
     extractedDatas.refillingStoreProperties.longitude
   );
- // setdeliveyfeeValue(newDeliveryFee ?? null);
-  useEffect(() => {
+  // setdeliveyfeeValue(newDeliveryFee ?? null);
+
+  useLayoutEffect(() => {
     if (newDeliveryFee !== null) {
-      console.log("line 649",newDeliveryFee);
+      // console.log("line 649", newDeliveryFee);
       setdeliveyfeeValue(newDeliveryFee);
     } else {
       setdeliveyfeeValue(0);
@@ -736,6 +936,19 @@ export default function CartScreen() {
       newDeliveryDetails.length > 0
         ? newDeliveryDetails[0].vehicle1Name
         : null;
+    const vehicle1MinQty =
+      newDeliveryDetails &&
+      Array.isArray(newDeliveryDetails) &&
+      newDeliveryDetails.length > 0
+        ? newDeliveryDetails[0].vehicle1MinQty
+        : null;
+    const vehicle1MaxQty =
+      newDeliveryDetails &&
+      Array.isArray(newDeliveryDetails) &&
+      newDeliveryDetails.length > 0
+        ? newDeliveryDetails[0].vehicle1MaxQty
+        : null;
+
     const vehicle1Fee =
       newDeliveryDetails &&
       Array.isArray(newDeliveryDetails) &&
@@ -755,7 +968,19 @@ export default function CartScreen() {
       newDeliveryDetails.length > 0
         ? parseFloat(newDeliveryDetails[0].vehicle2Fee)
         : null;
-
+    const vehicle2MinQty =
+      newDeliveryDetails &&
+      Array.isArray(newDeliveryDetails) &&
+      newDeliveryDetails.length > 0
+        ? newDeliveryDetails[0].vehicle2MinQty
+        : null;
+    const vehicle2MaxQty =
+      newDeliveryDetails &&
+      Array.isArray(newDeliveryDetails) &&
+      newDeliveryDetails.length > 0
+        ? newDeliveryDetails[0].vehicle2MaxQty
+        : null;
+    //console.log("line 962",vehicle2MaxQty, typeof vehicle2MaxQty)
     const vehicle3Name =
       newDeliveryDetails &&
       Array.isArray(newDeliveryDetails) &&
@@ -768,10 +993,40 @@ export default function CartScreen() {
       newDeliveryDetails.length > 0
         ? parseFloat(newDeliveryDetails[0].vehicle3Fee)
         : null;
+    const vehicle3MinQty =
+      newDeliveryDetails &&
+      Array.isArray(newDeliveryDetails) &&
+      newDeliveryDetails.length > 0
+        ? newDeliveryDetails[0].vehicle3MinQty
+        : null;
+    const vehicle3MaxQty =
+      newDeliveryDetails &&
+      Array.isArray(newDeliveryDetails) &&
+      newDeliveryDetails.length > 0
+        ? newDeliveryDetails[0].vehicle3MaxQty
+        : null;
 
-    //console.log("line 695",vehicle1Name)
+    const vehicle4Fee =
+      newDeliveryDetails &&
+      Array.isArray(newDeliveryDetails) &&
+      newDeliveryDetails.length > 0
+        ? parseFloat(newDeliveryDetails[0].vehicle4Fee)
+        : null;
+
+    const vehicle4MinQty =
+      newDeliveryDetails &&
+      Array.isArray(newDeliveryDetails) &&
+      newDeliveryDetails.length > 0
+        ? newDeliveryDetails[0].vehicle4MinQty
+        : null;
+    const vehicle4MaxQty =
+      newDeliveryDetails &&
+      Array.isArray(newDeliveryDetails) &&
+      newDeliveryDetails.length > 0
+        ? newDeliveryDetails[0].vehicle4MaxQty
+        : null;
+
     if (selectedOrdertype === "Delivery") {
-
       //standard delivery type
       if (selectedDeliveryType === standardDeliveryValue) {
         console.log("Standard CUstomer distance", customerDistanceToStation);
@@ -787,89 +1042,214 @@ export default function CartScreen() {
             const additionalCost =
               parseFloat(standardDeliveryFee) * exceedingDistance;
             setdeliveyfeeValue(additionalCost.toFixed(2));
-            console.log(" Standard additioal cost", additionalCost);
+            console.log("Standard additional cost", additionalCost);
 
-            const total = parseFloat(totalInitialAmount) + additionalCost;
-            console.log("Standard total result standard", total);
+            // const total = parseFloat(totalInitialAmount) + additionalCost;
+            // console.log("Standard total result standard", total);
             let subtotal = 0;
-            if (totalQuantity >= 6) {
-              subtotal = total + vehicle3Fee; //total amount is added by the fee of the vehicle
-
-              setvehicleFeeSaveToDb(vehicle3Fee);
-
-              if (!isNaN(subtotal)) {
-                setTotalAmount(subtotal.toFixed(2));
+            if (
+              totalQuantity >= Number(vehicle1MinQty) &&
+              totalQuantity <= Number(vehicle1MaxQty)
+            ) {
+              if (
+                vehicle1Fee !== "" ||
+                vehicle1MinQty !== "" ||
+                vehicle1MaxQty !== ""
+              ) {
+                subtotal =
+                  totalInitialAmount +
+                  parseFloat(vehicle1Fee) +
+                  parseFloat(additionalCost);
+                console.log(
+                  "Standard>--->vehicle1MinQty && vehicle1MaxQty&& totalQuantity > parseFloat(vehicle1MinQty)"
+                );
+                //line 1158
+                setvehicleFeeSaveToDb(vehicle1Fee);
+                setdeliveyfeeValue(additionalCost.toFixed(2));
+                if (!isNaN(subtotal)) {
+                  setTotalAmount(subtotal.toFixed(2));
+                } else {
+                  setTotalAmount("Total Amount");
+                }
+                // Perform any additional operations or set states based on the subtotal
               } else {
-                setTotalAmount("Total Amount");
+                //const result=
+                console.log("Vehicle1Fee is not available or has no value");
+                // Handle the case when vehicle1Fee is not present or has no value
               }
-            } else if (totalQuantity >= 2 && totalQuantity <= 5) {
-              subtotal = total + vehicle2Fee; //total amount is added by the fee of the vehicle
-              setvehicleFeeSaveToDb(vehicle2Fee);
-              //alert(`Quantities-->${totalQuantity} and the fee is ${vehicle2Fee}`)
-              console.log("line 770", subtotal);
-              if (!isNaN(subtotal)) {
-                setTotalAmount(subtotal.toFixed(2));
+            } else if (
+              totalQuantity >= Number(vehicle2MinQty) &&
+              totalQuantity <= Number(vehicle2MaxQty)
+            ) {
+              if (vehicle2Fee !== "") {
+                subtotal =
+                  totalInitialAmount +
+                  parseFloat(vehicle2Fee) +
+                  parseFloat(additionalCost);
+                console.log(
+                  "Standard--->vehicle2MinQty && vehicle1MaxQty&& totalQuantity > parseFloat(vehicle2MinQty)"
+                );
+                //line 1158
+                setvehicleFeeSaveToDb(vehicle2Fee);
+                setdeliveyfeeValue(additionalCost.toFixed(2));
+                if (!isNaN(subtotal)) {
+                  setTotalAmount(subtotal.toFixed(2));
+                } else {
+                  setTotalAmount("Total Amount");
+                }
+                // Perform any additional operations or set states based on the subtotal
               } else {
-                setTotalAmount("Total Amount");
+                console.log("Vehicle1Fee is not available or has no value");
+                // Handle the case when vehicle1Fee is not present or has no value
               }
-            } else {
-              subtotal = total + vehicle1Fee;
-              setvehicleFeeSaveToDb(vehicle1Fee);
-              // alert(`Quantities-->${totalQuantity} and the fee is ${vehicle1Fee}`)
-              if (!isNaN(subtotal)) {
-                setTotalAmount(subtotal.toFixed(2));
+            } else if (
+              totalQuantity >= Number(vehicle3MinQty) &&
+              totalQuantity <= Number(vehicle3MaxQty)
+            ) {
+              if (vehicle3Fee !== "") {
+                subtotal =
+                  totalInitialAmount +
+                  parseFloat(vehicle3Fee) +
+                  parseFloat(additionalCost);
+                console.log(
+                  "Standard--->vehicle1MinQty && vehicle1MaxQty&& totalQuantity > parseFloat(vehicle1MinQty)"
+                );
+
+                setvehicleFeeSaveToDb(vehicle3Fee);
+                setdeliveyfeeValue(additionalCost.toFixed(2));
+                if (!isNaN(subtotal)) {
+                  setTotalAmount(subtotal.toFixed(2));
+                } else {
+                  setTotalAmount("Total Amount");
+                }
+                // Perform any additional operations or set states based on the subtotal
               } else {
-                setTotalAmount("Total Amount");
+                console.log("Vehicle3Fee is not available or has no value");
+                // Handle the case when vehicle1Fee is not present or has no value
+              }
+            } else if (
+              totalQuantity >= Number(vehicle4MinQty) &&
+              totalQuantity <= Number(vehicle4MaxQty)
+            ) {
+              if (vehicle4Fee !== "") {
+                subtotal =
+                  totalInitialAmount +
+                  parseFloat(vehicle4Fee) +
+                  parseFloat(additionalCost);
+                console.log(
+                  "Standard--->vehicle4MinQty && vehicle1MaxQty&& totalQuantity > parseFloat(vehicle4MinQty)"
+                );
+
+                setvehicleFeeSaveToDb(vehicle4Fee);
+                setdeliveyfeeValue(additionalCost.toFixed(2));
+                if (!isNaN(subtotal)) {
+                  setTotalAmount(subtotal.toFixed(2));
+                } else {
+                  setTotalAmount("Total Amount");
+                }
+                // Perform any additional operations or set states based on the subtotal
+              } else {
+                console.log("Vehicle3Fee is not available or has no value");
+                // Handle the case when vehicle1Fee is not present or has no value
               }
             }
           }
         } else {
           //if customer location is less  than standard distance set by admin
-          //console.log("DELIVERY --> STANDARD--> ELSE BLOCK--> CUSTOMER DISTANCE IS LESS THAN TO DISTANCE SET BY ADMIN IN STANDARD")
-          if (totalInitialAmount) {
-            if (totalQuantity >= 6) {
-              console.log("total quantity is 6 ", totalQuantity);
+          console.log(
+            "DELIVERY --> STANDARD--> ELSE BLOCK--> CUSTOMER DISTANCE IS LESS THAN TO DISTANCE SET BY ADMIN IN STANDARD"
+          );
 
-              const subtotalAmount =
-                totalInitialAmount + parseFloat(vehicle3Fee);
-              setvehicleFeeSaveToDb(vehicle3Fee);
-              if (!isNaN(parseFloat(subtotalAmount).toFixed(2))) {
+          if (totalInitialAmount) {
+            let subtotal = 0;
+            // subtotal = totalInitialAmount + parseFloat(vehicle1Fee);
+            if (
+              totalQuantity >= Number(vehicle1MinQty) &&
+              totalQuantity <= Number(vehicle1MaxQty)
+            ) {
+              if (vehicle1Fee !== "") {
+                subtotal = totalInitialAmount + parseFloat(vehicle1Fee);
                 console.log(
-                  "ORDER TYPE IS DELIVERY, DELIVERY TYPE IS STANDARD----> QUANTITY IS 6",
-                  subtotalAmount
+                  "Standard but less than distance--->vehicle1MinQty && vehicle1MaxQty&& totalQuantity > parseFloat(vehicle1MinQty)"
                 );
-                setTotalAmount(parseFloat(subtotalAmount).toFixed(2));
+                //line 1158
+                setvehicleFeeSaveToDb(vehicle1Fee);
+                setdeliveyfeeValue(0);
+                if (!isNaN(subtotal)) {
+                  setTotalAmount(subtotal.toFixed(2));
+                } else {
+                  setTotalAmount("Total Amount");
+                }
+                // Perform any additional operations or set states based on the subtotal
               } else {
-                setTotalAmount("Total Amount");
+                console.log("Vehicle1Fee is not available or has no value");
+                // Handle the case when vehicle1Fee is not present or has no value
               }
-            } else if (totalQuantity >= 2 && totalQuantity <= 5) {
-              console.log("total quantity is 2 ", totalQuantity);
-              const subtotalAmount =
-                totalInitialAmount + parseFloat(vehicle2Fee);
-              setvehicleFeeSaveToDb(vehicle2Fee);
-              if (!isNaN(parseFloat(subtotalAmount).toFixed(2))) {
+            } else if (
+              totalQuantity >= Number(vehicle2MinQty) &&
+              totalQuantity <= Number(vehicle2MaxQty)
+            ) {
+              if (vehicle2Fee !== "") {
+                subtotal = totalInitialAmount + parseFloat(vehicle2Fee);
                 console.log(
-                  "ORDER TYPE IS DELIVERY, DELIVERY TYPE IS STANDARD----> QUANTITY IS 2 or more but greater then 5",
-                  subtotalAmount
+                  "Standard but less than distance--->vehicle2MinQty && vehicle1MaxQty&& totalQuantity > parseFloat(vehicle2MinQty)"
                 );
-                setTotalAmount(parseFloat(subtotalAmount).toFixed(2));
+                //line 1158
+                setvehicleFeeSaveToDb(vehicle2Fee);
+                setdeliveyfeeValue(0);
+                if (!isNaN(subtotal)) {
+                  setTotalAmount(subtotal.toFixed(2));
+                } else {
+                  setTotalAmount("Total Amount");
+                }
+                // Perform any additional operations or set states based on the subtotal
               } else {
-                setTotalAmount("Total Amount");
+                console.log("Vehicle1Fee is not available or has no value");
+                // Handle the case when vehicle1Fee is not present or has no value
               }
-            } else {
-              //if the qty is 6 up
-              console.log("total quantity is 1 ", totalQuantity);
-              const subtotalAmount =
-                totalInitialAmount + parseFloat(vehicle1Fee);
-              setvehicleFeeSaveToDb(vehicle1Fee);
-              if (!isNaN(parseFloat(subtotalAmount).toFixed(2))) {
+            } else if (
+              totalQuantity >= Number(vehicle3MinQty) &&
+              totalQuantity <= Number(vehicle3MaxQty)
+            ) {
+              if (vehicle3Fee !== "") {
+                subtotal = totalInitialAmount + parseFloat(vehicle3Fee);
                 console.log(
-                  "ORDER TYPE IS DELIVERY, DELIVERY TYPE IS STANDARD----> QUANTITY is 1",
-                  subtotalAmount
+                  "Standard but less than distance--->vehicle1MinQty && vehicle1MaxQty&& totalQuantity > parseFloat(vehicle1MinQty)"
                 );
-                setTotalAmount(parseFloat(subtotalAmount).toFixed(2));
+
+                setvehicleFeeSaveToDb(vehicle3Fee);
+                setdeliveyfeeValue(0);
+                if (!isNaN(subtotal)) {
+                  setTotalAmount(subtotal.toFixed(2));
+                } else {
+                  setTotalAmount("Total Amount");
+                }
+                // Perform any additional operations or set states based on the subtotal
               } else {
-                setTotalAmount("Total Amount");
+                console.log("Vehicle3Fee is not available or has no value");
+                // Handle the case when vehicle1Fee is not present or has no value
+              }
+            } else if (
+              totalQuantity >= Number(vehicle4MinQty) &&
+              totalQuantity <= Number(vehicle4MaxQty)
+            ) {
+              if (vehicle4Fee !== "") {
+                subtotal = totalInitialAmount + parseFloat(vehicle4Fee);
+                console.log(
+                  "Standard but less than distance--->vehicle4MinQty && vehicle1MaxQty&& totalQuantity > parseFloat(vehicle4MinQty)"
+                );
+
+                setvehicleFeeSaveToDb(vehicle4Fee);
+                setdeliveyfeeValue(0);
+                if (!isNaN(subtotal)) {
+                  setTotalAmount(subtotal.toFixed(2));
+                } else {
+                  setTotalAmount("Total Amount");
+                }
+                // Perform any additional operations or set states based on the subtotal
+              } else {
+                console.log("Vehicle3Fee is not available or has no value");
+                // Handle the case when vehicle1Fee is not present or has no value
               }
             }
           }
@@ -879,8 +1259,6 @@ export default function CartScreen() {
           /* if selected delivery type is express */
         }
         console.log("Express CUstomer distance", customerDistanceToStation);
-        console.log("Express distance", expressDeliveryDistance);
-        // console.log("Delivery but express is choosen");
         // If the value of customerDistanceToStation is greater than expressDeliveryDistance, then the code inside the if block will execute.
         if (customerDistanceToStation > expressDeliveryDistance) {
           if (totalInitialAmount) {
@@ -891,91 +1269,238 @@ export default function CartScreen() {
             const additionalCost =
               parseFloat(expressDeliveryFee) * exceedingDistance; // time sa pay if pila ang ni exceed
             console.log("Express add cost", additionalCost);
-            setdeliveyfeeValue(additionalCost.toFixed(2));
-            const total = parseFloat(totalInitialAmount) + additionalCost; //add ang additional cost plust and totalInitialamount
-            let subtotal = 0;
-            if (totalQuantity >= 6) {
-              subtotal = total + vehicle3Fee; //total amount is added by the fee of the vehicle
-              setvehicleFeeSaveToDb(vehicle3Fee);
-              //  alert(`Quantities-->${totalQuantity} and the fee is ${vehicle3Fee}`)
+            //  setdeliveyfeeValue(additionalCost.toFixed(2));
 
-              if (!isNaN(subtotal)) {
-                setTotalAmount(subtotal.toFixed(2));
+            let subtotal = 0;
+
+            //  console.log("line 1131",totalQuantity,typeof totalQuantity);
+            if (
+              totalQuantity >= Number(vehicle1MinQty) &&
+              totalQuantity <= Number(vehicle1MaxQty)
+            ) {
+              if (vehicle1Fee !== "") {
+                const delivery =
+                  parseFloat(expressDeliveryFee) + additionalCost;
+                subtotal =
+                  totalInitialAmount +
+                  parseFloat(vehicle1Fee) +
+                  parseFloat(expressDeliveryFee) +
+                  additionalCost;
+
+                console.log(
+                  "Express--->vehicle1MinQty && vehicle1MaxQty&& totalQuantity > parseFloat(vehicle1MinQty)",
+                  subtotal
+                );
+
+                setvehicleFeeSaveToDb(vehicle1Fee.toFixed(2));
+                setdeliveyfeeValue(delivery.toFixed(2));
+
+                if (!isNaN(subtotal)) {
+                  setTotalAmount(subtotal.toFixed(2));
+                } else {
+                  setTotalAmount("Total Amount");
+                }
+                // Perform any additional operations or set states based on the subtotal
               } else {
-                setTotalAmount("Total Amount");
+                console.log("Vehicle1Fee is not available or has no value");
+                // Handle the case when vehicle1Fee is not present or has no value
               }
-            } else if (totalQuantity >= 2 && totalQuantity <= 5) {
-              subtotal = total + vehicle2Fee; //total amount is added by the fee of the vehicle
-              setvehicleFeeSaveToDb(vehicle2Fee);
-              //alert(`Quantities-->${totalQuantity} and the fee is ${vehicle2Fee}`)
-              console.log("line 770", subtotal);
-              if (!isNaN(subtotal)) {
-                setTotalAmount(subtotal.toFixed(2));
+            } else if (
+              totalQuantity >= Number(vehicle2MinQty) &&
+              totalQuantity <= Number(vehicle2MaxQty)
+            ) {
+              if (vehicle2Fee !== "") {
+                const delivery =
+                  parseFloat(expressDeliveryFee) + additionalCost;
+                subtotal =
+                  totalInitialAmount +
+                  parseFloat(vehicle2Fee) +
+                  parseFloat(expressDeliveryFee) +
+                  additionalCost;
+
+                console.log(
+                  "Express-->vehicle2MinQty && vehicle2MaxQty&& totalQuantity > parseFloat(vehicle2MinQty))",
+                  subtotal
+                );
+                //line 1158
+                setvehicleFeeSaveToDb(vehicle2Fee.toFixed(2));
+                setdeliveyfeeValue(delivery.toFixed(2));
+
+                if (!isNaN(subtotal)) {
+                  setTotalAmount(subtotal.toFixed(2));
+                } else {
+                  setTotalAmount("Total Amount");
+                }
+                // Perform any additional operations or set states based on the subtotal
               } else {
-                setTotalAmount("Total Amount");
+                console.log("Vehicle1Fee is not available or has no value");
+                // Handle the case when vehicle1Fee is not present or has no value
               }
-            } else {
-              subtotal = total + vehicle1Fee;
-              setvehicleFeeSaveToDb(vehicle1Fee);
-              // alert(`Quantities-->${totalQuantity} and the fee is ${vehicle1Fee}`)
-              if (!isNaN(subtotal)) {
-                setTotalAmount(subtotal.toFixed(2));
+            } else if (
+              totalQuantity >= Number(vehicle3MinQty) &&
+              totalQuantity <= Number(vehicle3MaxQty)
+            ) {
+              if (vehicle3Fee !== "") {
+                const delivery =
+                  parseFloat(expressDeliveryFee) + additionalCost;
+                subtotal =
+                  totalInitialAmount +
+                  parseFloat(vehicle3Fee) +
+                  parseFloat(expressDeliveryFee) +
+                  additionalCost;
+
+                console.log(
+                  "Express-->vehicle2MinQty && vehicle2MaxQty&& totalQuantity > parseFloat(vehicle2MinQty))",
+                  subtotal
+                );
+                //line 1158
+                setvehicleFeeSaveToDb(vehicle3Fee.toFixed(2));
+                setdeliveyfeeValue(delivery.toFixed(2));
+
+                if (!isNaN(subtotal)) {
+                  setTotalAmount(subtotal.toFixed(2));
+                } else {
+                  setTotalAmount("Total Amount");
+                }
+                // Perform any additional operations or set states based on the subtotal
               } else {
-                setTotalAmount("Total Amount");
+                console.log("Vehicle1Fee is not available or has no value");
+                // Handle the case when vehicle1Fee is not present or has no value
+              }
+            } else if (
+              totalQuantity >= Number(vehicle4MinQty) &&
+              totalQuantity <= Number(vehicle4MaxQty)
+            ) {
+              if (vehicle4Fee !== "") {
+                const delivery =
+                  parseFloat(expressDeliveryFee) + additionalCost;
+                subtotal =
+                  totalInitialAmount +
+                  parseFloat(vehicle4Fee) +
+                  parseFloat(expressDeliveryFee) +
+                  additionalCost;
+
+                console.log(
+                  "Express-->vehicle2MinQty && vehicle2MaxQty&& totalQuantity > parseFloat(vehicle2MinQty))",
+                  subtotal
+                );
+                //line 1158
+                setvehicleFeeSaveToDb(vehicle4Fee.toFixed(2));
+                setdeliveyfeeValue(delivery.toFixed(2));
+
+                if (!isNaN(subtotal)) {
+                  setTotalAmount(subtotal.toFixed(2));
+                } else {
+                  setTotalAmount("Total Amount");
+                }
+                // Perform any additional operations or set states based on the subtotal
+              } else {
+                console.log("Vehicle1Fee is not available or has no value");
+                // Handle the case when vehicle1Fee is not present or has no value
               }
             }
-
-            // if (!isNaN(total)) {
-            //   setTotalAmount(total.toFixed(2));
-            // } else {
-            //   setTotalAmount("Total Amount");
-            // }
           }
         } else {
+          //express delivery type if less than sa ge set ni admin for expressDistance
           if (totalInitialAmount) {
-            if (totalQuantity >= 6) {
-              console.log("total quantity is 6 ", totalQuantity);
+            let subtotal = 0;
+            if (
+              totalQuantity >= parseFloat(vehicle1MinQty) &&
+              totalQuantity <= parseFloat(vehicle1MaxQty)
+            ) {
+              if (vehicle1Fee !== "") {
+                subtotal =
+                  totalInitialAmount +
+                  parseFloat(vehicle1Fee) +
+                  parseFloat(expressDeliveryFee);
 
-              const subtotalAmount =
-                totalInitialAmount + parseFloat(vehicle3Fee);
-              setvehicleFeeSaveToDb(vehicle3Fee);
-              if (!isNaN(parseFloat(subtotalAmount).toFixed(2))) {
                 console.log(
-                  "ORDER TYPE IS DELIVERY, DELIVERY TYPE IS EXPRESSS----> QUANTITY IS 6",
-                  subtotalAmount
+                  "Express but less than distance--->vehicle1MinQty && vehicle1MaxQty&& totalQuantity > parseFloat(vehicle1MinQty)"
                 );
-                setTotalAmount(parseFloat(subtotalAmount).toFixed(2));
+                //line 1158
+                setvehicleFeeSaveToDb(vehicle1Fee);
+                setdeliveyfeeValue(expressDeliveryFee);
+                if (!isNaN(subtotal)) {
+                  setTotalAmount(subtotal.toFixed(2));
+                } else {
+                  setTotalAmount("Total Amount");
+                }
+                // Perform any additional operations or set states based on the subtotal
               } else {
-                setTotalAmount("Total Amount");
+                console.log("Vehicle1Fee is not available or has no value");
+                // Handle the case when vehicle1Fee is not present or has no value
               }
-            } else if (totalQuantity >= 2 && totalQuantity <= 5) {
-              console.log("total quantity is 2 ", totalQuantity);
-              const subtotalAmount =
-                totalInitialAmount + parseFloat(vehicle2Fee);
-              setvehicleFeeSaveToDb(vehicle2Fee);
-              if (!isNaN(parseFloat(subtotalAmount).toFixed(2))) {
+            } else if (
+              totalQuantity >= parseFloat(vehicle2MinQty) &&
+              totalQuantity <= parseFloat(vehicle2MaxQty)
+            ) {
+              if (vehicle2Fee !== "") {
+                subtotal =
+                  totalInitialAmount +
+                  parseFloat(vehicle2Fee) +
+                  parseFloat(expressDeliveryFee);
                 console.log(
-                  "ORDER TYPE IS DELIVERY, DELIVERY TYPE IS EXPRESSS----> QUANTITY IS 2 or more but greater then 5",
-                  subtotalAmount
+                  "Express but less than distance-->vehicle2MinQty && vehicle2MaxQty&& totalQuantity > parseFloat(vehicle2MinQty)"
                 );
-                setTotalAmount(parseFloat(subtotalAmount).toFixed(2));
+                //line 1158
+                setvehicleFeeSaveToDb(vehicle2Fee);
+                setdeliveyfeeValue(expressDeliveryFee);
+                if (!isNaN(subtotal)) {
+                  setTotalAmount(subtotal.toFixed(2));
+                } else {
+                  setTotalAmount("Total Amount");
+                }
               } else {
-                setTotalAmount("Total Amount");
+                console.log("Vehicle2Fee is not available or has no value");
+                // Handle the case when vehicle1Fee is not present or has no value
               }
-            } else {
-              //if the qty is 6 up
-              console.log("total quantity is 1 ", totalQuantity);
-              const subtotalAmount =
-                totalInitialAmount + parseFloat(vehicle1Fee);
-              setvehicleFeeSaveToDb(vehicle1Fee);
-              if (!isNaN(parseFloat(subtotalAmount).toFixed(2))) {
+            } else if (
+              totalQuantity >= parseFloat(vehicle3MinQty) &&
+              totalQuantity <= parseFloat(vehicle3MaxQty)
+            ) {
+              if (vehicle3Fee !== "") {
+                subtotal =
+                  totalInitialAmount +
+                  parseFloat(vehicle3Fee) +
+                  parseFloat(expressDeliveryFee);
                 console.log(
-                  "ORDER TYPE IS DELIVERY, DELIVERY TYPE IS EXPRESSS----> QUANTITY is 1",
-                  subtotalAmount
+                  "Express but less than distance---> && vehicle3MaxQty&& totalQuantity > parseFloat(vehicle3MinQty)"
                 );
-                setTotalAmount(parseFloat(subtotalAmount).toFixed(2));
+                //line 1158
+                setvehicleFeeSaveToDb(vehicle3Fee);
+                setdeliveyfeeValue(expressDeliveryFee);
+                if (!isNaN(subtotal)) {
+                  setTotalAmount(subtotal.toFixed(2));
+                } else {
+                  setTotalAmount("Total Amount");
+                }
               } else {
-                setTotalAmount("Total Amount");
+                console.log("Vehicle2Fee is not available or has no value");
+                // Handle the case when vehicle1Fee is not present or has no value
+              }
+            } else if (
+              totalQuantity > parseFloat(vehicle4MinQty) &&
+              totalQuantity <= parseFloat(vehicle4MaxQty)
+            ) {
+              if (vehicle4Fee !== "") {
+                subtotal =
+                  totalInitialAmount +
+                  parseFloat(vehicle4Fee) +
+                  parseFloat(expressDeliveryFee);
+                console.log(
+                  "Express but less than distance-->vehicle4MinQty && vehicle4MaxQty&& totalQuantity > parseFloat(vehicle4MinQty)"
+                );
+                //line 1158
+                setvehicleFeeSaveToDb(vehicle4Fee);
+                setdeliveyfeeValue(expressDeliveryFee);
+                if (!isNaN(subtotal)) {
+                  setTotalAmount(subtotal.toFixed(2));
+                } else {
+                  setTotalAmount("Total Amount");
+                }
+              } else {
+                console.log("Vehicle2Fee is not available or has no value");
+                // Handle the case when vehicle1Fee is not present or has no value
               }
             }
           }
@@ -984,7 +1509,7 @@ export default function CartScreen() {
         {
           /* order type is delivery but reservation is choosen so after that if Reservation, another payment for the standard and express */
         }
-
+        console.log("Line 1463", selectedReserveDeliveryType);
         if (selectedReserveDeliveryType === standardDeliveryValue) {
           if (customerDistanceToStation > standardDistance) {
             if (totalInitialAmount) {
@@ -992,105 +1517,209 @@ export default function CartScreen() {
               const exceedingDistance = (
                 customerDistanceToStation - parseFloat(standardDistance)
               ).toFixed(2);
-              console.log(
-                "reservation Standard Exceeding Distance",
-                exceedingDistance
-              );
+              console.log("Standard Exceeding Distance", exceedingDistance);
 
               const additionalCost =
                 parseFloat(standardDeliveryFee) * exceedingDistance;
               setdeliveyfeeValue(additionalCost.toFixed(2));
-              console.log(
-                " reservation Standard additioal cost",
-                additionalCost
-              );
+              console.log(" Standard additional cost", additionalCost);
 
-              const total = parseFloat(totalInitialAmount) + additionalCost;
-              console.log("reservation Standard total result standard", total);
+              // const total = parseFloat(totalInitialAmount) + additionalCost;
+              // console.log("Standard total result standard", total);
               let subtotal = 0;
-              if (totalQuantity >= 6) {
-                subtotal = total + vehicle3Fee; //total amount is added by the fee of the vehicle
-                setvehicleFeeSaveToDb(vehicle3Fee);
-                if (!isNaN(subtotal)) {
-                  setTotalAmount(subtotal.toFixed(2));
+              if (
+                totalQuantity >= Number(vehicle1MinQty) &&
+                totalQuantity <= Number(vehicle1MaxQty)
+              ) {
+                if (vehicle1Fee !== "") {
+                  subtotal =
+                    totalInitialAmount +
+                    parseFloat(vehicle1Fee) +
+                    parseFloat(additionalCost);
+                  console.log(
+                    "Reservation Standard---->vehicle1MinQty && vehicle1MaxQty&& totalQuantity > parseFloat(vehicle1MinQty)"
+                  );
+                  //line 1158
+                  setvehicleFeeSaveToDb(vehicle1Fee);
+                  setdeliveyfeeValue(additionalCost.toFixed(2));
+                  if (!isNaN(subtotal)) {
+                    setTotalAmount(subtotal.toFixed(2));
+                  } else {
+                    setTotalAmount("Total Amount");
+                  }
+                  // Perform any additional operations or set states based on the subtotal
                 } else {
-                  setTotalAmount("Total Amount");
+                  console.log("Vehicle1Fee is not available or has no value");
+                  // Handle the case when vehicle1Fee is not present or has no value
                 }
-              } else if (totalQuantity >= 2 && totalQuantity <= 5) {
-                subtotal = total + vehicle2Fee; //total amount is added by the fee of the vehicle
-                setvehicleFeeSaveToDb(vehicle2Fee);
-                //alert(`Quantities-->${totalQuantity} and the fee is ${vehicle2Fee}`)
-                console.log("reservation standard line 770", subtotal);
-                if (!isNaN(subtotal)) {
-                  setTotalAmount(subtotal.toFixed(2));
+              } else if (
+                totalQuantity >= Number(vehicle2MinQty) &&
+                totalQuantity <= Number(vehicle2MaxQty)
+              ) {
+                if (vehicle2Fee !== "") {
+                  subtotal =
+                    totalInitialAmount +
+                    parseFloat(vehicle2Fee) +
+                    parseFloat(additionalCost);
+                  console.log(
+                    "Reservation Standard---->vehicle2MinQty && vehicle1MaxQty&& totalQuantity > parseFloat(vehicle2MinQty)"
+                  );
+                  //line 1158
+                  setvehicleFeeSaveToDb(vehicle2Fee);
+                  setdeliveyfeeValue(additionalCost.toFixed(2));
+                  if (!isNaN(subtotal)) {
+                    setTotalAmount(subtotal.toFixed(2));
+                  } else {
+                    setTotalAmount("Total Amount");
+                  }
+                  // Perform any additional operations or set states based on the subtotal
                 } else {
-                  setTotalAmount("Total Amount");
+                  console.log("Vehicle1Fee is not available or has no value");
+                  // Handle the case when vehicle1Fee is not present or has no value
                 }
-              } else {
-                subtotal = total + vehicle1Fee;
-                // alert(`Quantities-->${totalQuantity} and the fee is ${vehicle1Fee}`)
-                setvehicleFeeSaveToDb(vehicle1Fee);
-                if (!isNaN(subtotal)) {
-                  setTotalAmount(subtotal.toFixed(2));
+              } else if (
+                totalQuantity >= Number(vehicle3MinQty) &&
+                totalQuantity <= Number(vehicle3MaxQty)
+              ) {
+                if (vehicle3Fee !== "") {
+                  subtotal =
+                    totalInitialAmount +
+                    parseFloat(vehicle3Fee) +
+                    parseFloat(additionalCost);
+                  console.log(
+                    "Reservation Standard---->vehicle1MinQty && vehicle1MaxQty&& totalQuantity > parseFloat(vehicle1MinQty)"
+                  );
+
+                  setvehicleFeeSaveToDb(vehicle3Fee);
+                  setdeliveyfeeValue(additionalCost.toFixed(2));
+                  if (!isNaN(subtotal)) {
+                    setTotalAmount(subtotal.toFixed(2));
+                  } else {
+                    setTotalAmount("Total Amount");
+                  }
+                  // Perform any additional operations or set states based on the subtotal
                 } else {
-                  setTotalAmount("Total Amount");
+                  console.log("Vehicle3Fee is not available or has no value");
+                  // Handle the case when vehicle1Fee is not present or has no value
                 }
-              }
-            } else {
-              if (totalInitialAmount) {
-                if (!isNaN(parseFloat(totalInitialAmount).toFixed(2))) {
-                  setTotalAmount(parseFloat(totalInitialAmount).toFixed(2));
+              } else if (
+                totalQuantity >= Number(vehicle4MinQty) &&
+                totalQuantity <= Number(vehicle4MaxQty)
+              ) {
+                if (vehicle4Fee !== "") {
+                  subtotal =
+                    totalInitialAmount +
+                    parseFloat(vehicle4Fee) +
+                    parseFloat(additionalCost);
+                  console.log(
+                    "Reservation Standard--->vehicle4MinQty && vehicle1MaxQty&& totalQuantity > parseFloat(vehicle4MinQty)"
+                  );
+
+                  setvehicleFeeSaveToDb(vehicle4Fee);
+                  setdeliveyfeeValue(additionalCost.toFixed(2));
+                  if (!isNaN(subtotal)) {
+                    setTotalAmount(subtotal.toFixed(2));
+                  } else {
+                    setTotalAmount("Total Amount");
+                  }
+                  // Perform any additional operations or set states based on the subtotal
                 } else {
-                  setTotalAmount("Total Amount");
+                  console.log("Vehicle3Fee is not available or has no value");
+                  // Handle the case when vehicle1Fee is not present or has no value
                 }
               }
             }
           } else {
             if (totalInitialAmount) {
-              if (totalQuantity >= 6) {
-                console.log("total quantity is 6 ", totalQuantity);
-
-                const subtotalAmount =
-                  totalInitialAmount + parseFloat(vehicle3Fee);
-                setvehicleFeeSaveToDb(vehicle3Fee);
-
-                if (!isNaN(parseFloat(subtotalAmount).toFixed(2))) {
+              let subtotal = 0;
+              // subtotal = totalInitialAmount + parseFloat(vehicle1Fee);
+              if (
+                totalQuantity >= Number(vehicle1MinQty) &&
+                totalQuantity <= Number(vehicle1MaxQty)
+              ) {
+                if (vehicle1Fee !== "") {
+                  subtotal = totalInitialAmount + parseFloat(vehicle1Fee);
                   console.log(
-                    "ORDER TYPE IS DELIVERY, DELIVERY TYPE IS STANDARD----> QUANTITY IS 6",
-                    subtotalAmount
+                    "Reserve Standard but less than distance--->vehicle1MinQty && vehicle1MaxQty&& totalQuantity > parseFloat(vehicle1MinQty)"
                   );
-                  setTotalAmount(parseFloat(subtotalAmount).toFixed(2));
+                  //line 1158
+                  setvehicleFeeSaveToDb(vehicle1Fee);
+                  setdeliveyfeeValue(0);
+                  if (!isNaN(subtotal)) {
+                    setTotalAmount(subtotal.toFixed(2));
+                  } else {
+                    setTotalAmount("Total Amount");
+                  }
+                  // Perform any additional operations or set states based on the subtotal
                 } else {
-                  setTotalAmount("Total Amount");
+                  console.log("Vehicle1Fee is not available or has no value");
+                  // Handle the case when vehicle1Fee is not present or has no value
                 }
-              } else if (totalQuantity >= 2 && totalQuantity <= 5) {
-                console.log("total quantity is 2 ", totalQuantity);
-                const subtotalAmount =
-                  totalInitialAmount + parseFloat(vehicle2Fee);
-                setvehicleFeeSaveToDb(vehicle2Fee);
-                if (!isNaN(parseFloat(subtotalAmount).toFixed(2))) {
+              } else if (
+                totalQuantity >= Number(vehicle2MinQty) &&
+                totalQuantity <= Number(vehicle2MaxQty)
+              ) {
+                if (vehicle2Fee !== "") {
+                  subtotal = totalInitialAmount + parseFloat(vehicle2Fee);
                   console.log(
-                    "ORDER TYPE IS DELIVERY, DELIVERY TYPE IS STANDARD----> QUANTITY IS 2 or more but greater then 5",
-                    subtotalAmount
+                    "Reserve Standard  but less than distance--->vehicle2MinQty && vehicle1MaxQty&& totalQuantity > parseFloat(vehicle2MinQty)"
                   );
-                  setTotalAmount(parseFloat(subtotalAmount).toFixed(2));
+                  //line 1158
+                  setvehicleFeeSaveToDb(vehicle2Fee);
+                  setdeliveyfeeValue(0);
+                  if (!isNaN(subtotal)) {
+                    setTotalAmount(subtotal.toFixed(2));
+                  } else {
+                    setTotalAmount("Total Amount");
+                  }
+                  // Perform any additional operations or set states based on the subtotal
                 } else {
-                  setTotalAmount("Total Amount");
+                  console.log("Vehicle1Fee is not available or has no value");
+                  // Handle the case when vehicle1Fee is not present or has no value
                 }
-              } else {
-                //if the qty is 6 up
-                console.log("total quantity is 1 ", totalQuantity);
-                const subtotalAmount =
-                  totalInitialAmount + parseFloat(vehicle1Fee);
-                setvehicleFeeSaveToDb(vehicle1Fee);
-                if (!isNaN(parseFloat(subtotalAmount).toFixed(2))) {
+              } else if (
+                totalQuantity >= Number(vehicle3MinQty) &&
+                totalQuantity <= Number(vehicle3MaxQty)
+              ) {
+                if (vehicle3Fee !== "") {
+                  subtotal = totalInitialAmount + parseFloat(vehicle3Fee);
                   console.log(
-                    "ORDER TYPE IS DELIVERY, DELIVERY TYPE IS STANDARD----> QUANTITY is 1",
-                    subtotalAmount
+                    "Reserve Standard  but less than distance--->vehicle1MinQty && vehicle1MaxQty&& totalQuantity > parseFloat(vehicle1MinQty)"
                   );
-                  setTotalAmount(parseFloat(subtotalAmount).toFixed(2));
+
+                  setvehicleFeeSaveToDb(vehicle3Fee);
+                  setdeliveyfeeValue(0);
+                  if (!isNaN(subtotal)) {
+                    setTotalAmount(subtotal.toFixed(2));
+                  } else {
+                    setTotalAmount("Total Amount");
+                  }
+                  // Perform any additional operations or set states based on the subtotal
                 } else {
-                  setTotalAmount("Total Amount");
+                  console.log("Vehicle3Fee is not available or has no value");
+                  // Handle the case when vehicle1Fee is not present or has no value
+                }
+              } else if (
+                totalQuantity >= Number(vehicle4MinQty) &&
+                totalQuantity <= Number(vehicle4MaxQty)
+              ) {
+                if (vehicle4Fee !== "") {
+                  subtotal = totalInitialAmount + parseFloat(vehicle4Fee);
+                  console.log(
+                    "Reserve Standard  but less than distance--->vehicle4MinQty && vehicle1MaxQty&& totalQuantity > parseFloat(vehicle4MinQty)"
+                  );
+
+                  setvehicleFeeSaveToDb(vehicle4Fee);
+                  setdeliveyfeeValue(0);
+                  if (!isNaN(subtotal)) {
+                    setTotalAmount(subtotal.toFixed(2));
+                  } else {
+                    setTotalAmount("Total Amount");
+                  }
+                  // Perform any additional operations or set states based on the subtotal
+                } else {
+                  console.log("Vehicle3Fee is not available or has no value");
+                  // Handle the case when vehicle1Fee is not present or has no value
                 }
               }
             }
@@ -1105,90 +1734,242 @@ export default function CartScreen() {
               const additionalCost =
                 parseFloat(expressDeliveryFee) * exceedingDistance; // time sa pay if pila ang ni exceed
               console.log("Express add cost", additionalCost);
-              setdeliveyfeeValue(additionalCost.toFixed(2));
-              const total = parseFloat(totalInitialAmount) + additionalCost; //add ang additional cost plust and totalInitialamount
+              //  setdeliveyfeeValue(additionalCost.toFixed(2));
+
               let subtotal = 0;
-              if (totalQuantity >= 6) {
-                subtotal = total + vehicle3Fee; //total amount is added by the fee of the vehicle
-                //  alert(`Quantities-->${totalQuantity} and the fee is ${vehicle3Fee}`)
-                setvehicleFeeSaveToDb(vehicle3Fee);
-                if (!isNaN(subtotal)) {
-                  setTotalAmount(subtotal.toFixed(2));
+
+              //  console.log("line 1131",totalQuantity,typeof totalQuantity);
+              if (
+                totalQuantity >= Number(vehicle1MinQty) &&
+                totalQuantity <= Number(vehicle1MaxQty)
+              ) {
+                if (vehicle1Fee !== "") {
+                  const delivery =
+                    parseFloat(expressDeliveryFee) + additionalCost;
+                  subtotal =
+                    totalInitialAmount +
+                    parseFloat(vehicle1Fee) +
+                    parseFloat(expressDeliveryFee) +
+                    additionalCost;
+
+                  console.log(
+                    "Express--->vehicle1MinQty && vehicle1MaxQty&& totalQuantity > parseFloat(vehicle1MinQty)",
+                    subtotal
+                  );
+
+                  setvehicleFeeSaveToDb(vehicle1Fee.toFixed(2));
+                  setdeliveyfeeValue(delivery.toFixed(2));
+
+                  if (!isNaN(subtotal)) {
+                    setTotalAmount(subtotal.toFixed(2));
+                  } else {
+                    setTotalAmount("Total Amount");
+                  }
+                  // Perform any additional operations or set states based on the subtotal
                 } else {
-                  setTotalAmount("Total Amount");
+                  console.log("Vehicle1Fee is not available or has no value");
+                  // Handle the case when vehicle1Fee is not present or has no value
                 }
-              } else if (totalQuantity >= 2 && totalQuantity <= 5) {
-                subtotal = total + vehicle2Fee; //total amount is added by the fee of the vehicle
-                setvehicleFeeSaveToDb(vehicle2Fee);
-                //alert(`Quantities-->${totalQuantity} and the fee is ${vehicle2Fee}`)
-                console.log("line 770", subtotal);
-                if (!isNaN(subtotal)) {
-                  setTotalAmount(subtotal.toFixed(2));
+              } else if (
+                totalQuantity >= Number(vehicle2MinQty) &&
+                totalQuantity <= Number(vehicle2MaxQty)
+              ) {
+                if (vehicle2Fee !== "") {
+                  const delivery =
+                    parseFloat(expressDeliveryFee) + additionalCost;
+                  subtotal =
+                    totalInitialAmount +
+                    parseFloat(vehicle2Fee) +
+                    parseFloat(expressDeliveryFee) +
+                    additionalCost;
+
+                  console.log(
+                    "Express-->vehicle2MinQty && vehicle2MaxQty&& totalQuantity > parseFloat(vehicle2MinQty))",
+                    subtotal
+                  );
+                  //line 1158
+                  setvehicleFeeSaveToDb(vehicle2Fee.toFixed(2));
+                  setdeliveyfeeValue(delivery.toFixed(2));
+
+                  if (!isNaN(subtotal)) {
+                    setTotalAmount(subtotal.toFixed(2));
+                  } else {
+                    setTotalAmount("Total Amount");
+                  }
+                  // Perform any additional operations or set states based on the subtotal
                 } else {
-                  setTotalAmount("Total Amount");
+                  console.log("Vehicle1Fee is not available or has no value");
+                  // Handle the case when vehicle1Fee is not present or has no value
                 }
-              } else {
-                subtotal = total + vehicle1Fee;
-                setvehicleFeeSaveToDb(vehicle1Fee);
-                // alert(`Quantities-->${totalQuantity} and the fee is ${vehicle1Fee}`)
-                if (!isNaN(subtotal)) {
-                  setTotalAmount(subtotal.toFixed(2));
+              } else if (
+                totalQuantity >= Number(vehicle3MinQty) &&
+                totalQuantity <= Number(vehicle3MaxQty)
+              ) {
+                if (vehicle3Fee !== "") {
+                  const delivery =
+                    parseFloat(expressDeliveryFee) + additionalCost;
+                  subtotal =
+                    totalInitialAmount +
+                    parseFloat(vehicle3Fee) +
+                    parseFloat(expressDeliveryFee) +
+                    additionalCost;
+
+                  console.log(
+                    "Express-->vehicle2MinQty && vehicle2MaxQty&& totalQuantity > parseFloat(vehicle2MinQty))",
+                    subtotal
+                  );
+                  //line 1158
+                  setvehicleFeeSaveToDb(vehicle3Fee.toFixed(2));
+                  setdeliveyfeeValue(delivery.toFixed(2));
+
+                  if (!isNaN(subtotal)) {
+                    setTotalAmount(subtotal.toFixed(2));
+                  } else {
+                    setTotalAmount("Total Amount");
+                  }
+                  // Perform any additional operations or set states based on the subtotal
                 } else {
-                  setTotalAmount("Total Amount");
+                  console.log("Vehicle1Fee is not available or has no value");
+                  // Handle the case when vehicle1Fee is not present or has no value
+                }
+              } else if (
+                totalQuantity >= Number(vehicle4MinQty) &&
+                totalQuantity <= Number(vehicle4MaxQty)
+              ) {
+                if (vehicle4Fee !== "") {
+                  const delivery =
+                    parseFloat(expressDeliveryFee) + additionalCost;
+                  subtotal =
+                    totalInitialAmount +
+                    parseFloat(vehicle4Fee) +
+                    parseFloat(expressDeliveryFee) +
+                    additionalCost;
+
+                  console.log(
+                    "Express-->vehicle2MinQty && vehicle2MaxQty&& totalQuantity > parseFloat(vehicle2MinQty))",
+                    subtotal
+                  );
+                  //line 1158
+                  setvehicleFeeSaveToDb(vehicle4Fee.toFixed(2));
+                  setdeliveyfeeValue(delivery.toFixed(2));
+
+                  if (!isNaN(subtotal)) {
+                    setTotalAmount(subtotal.toFixed(2));
+                  } else {
+                    setTotalAmount("Total Amount");
+                  }
+                  // Perform any additional operations or set states based on the subtotal
+                } else {
+                  console.log("Vehicle1Fee is not available or has no value");
+                  // Handle the case when vehicle1Fee is not present or has no value
                 }
               }
-
-              // if (!isNaN(total)) {
-              //   setTotalAmount(total.toFixed(2));
-              // } else {
-              //   setTotalAmount("Total Amount");
-              // }
             }
           } else {
             if (totalInitialAmount) {
-              if (totalQuantity >= 6) {
-                console.log("total quantity is 6 ", totalQuantity);
+              let subtotal = 0;
+              if (
+                totalQuantity > parseFloat(vehicle1MinQty) ||
+                totalQuantity <= parseFloat(vehicle1MaxQty)
+              ) {
+                if (vehicle1Fee !== "") {
+                  subtotal =
+                    totalInitialAmount +
+                    parseFloat(vehicle1Fee) +
+                    parseFloat(expressDeliveryFee);
 
-                const subtotalAmount =
-                  totalInitialAmount + parseFloat(vehicle3Fee);
-                setvehicleFeeSaveToDb(vehicle3Fee);
-                if (!isNaN(parseFloat(subtotalAmount).toFixed(2))) {
                   console.log(
-                    "ORDER TYPE IS DELIVERY, DELIVERY TYPE IS STANDARD----> QUANTITY IS 6",
-                    subtotalAmount
+                    "Express but less than distance--->vehicle1MinQty && vehicle1MaxQty&& totalQuantity > parseFloat(vehicle1MinQty)"
                   );
-                  setTotalAmount(parseFloat(subtotalAmount).toFixed(2));
+                  //line 1158
+                  setvehicleFeeSaveToDb(vehicle1Fee);
+                  setdeliveyfeeValue(expressDeliveryFee);
+                  if (!isNaN(subtotal)) {
+                    setTotalAmount(subtotal.toFixed(2));
+                  } else {
+                    setTotalAmount("Total Amount");
+                  }
+                  // Perform any additional operations or set states based on the subtotal
                 } else {
-                  setTotalAmount("Total Amount");
+                  console.log("Vehicle1Fee is not available or has no value");
+                  // Handle the case when vehicle1Fee is not present or has no value
                 }
-              } else if (totalQuantity >= 2 && totalQuantity <= 5) {
-                console.log("total quantity is 2 ", totalQuantity);
-                const subtotalAmount =
-                  totalInitialAmount + parseFloat(vehicle2Fee);
-                setvehicleFeeSaveToDb(vehicle2Fee);
-                if (!isNaN(parseFloat(subtotalAmount).toFixed(2))) {
+              }
+
+              if (
+                totalQuantity > parseFloat(vehicle2MinQty) ||
+                totalQuantity <= parseFloat(vehicle2MaxQty)
+              ) {
+                if (vehicle2Fee !== "") {
+                  subtotal =
+                    totalInitialAmount +
+                    parseFloat(vehicle2Fee) +
+                    parseFloat(expressDeliveryFee);
                   console.log(
-                    "ORDER TYPE IS DELIVERY, DELIVERY TYPE IS STANDARD----> QUANTITY IS 2 or more but greater then 5",
-                    subtotalAmount
+                    "Express but less than distance-->vehicle2MinQty && vehicle2MaxQty&& totalQuantity > parseFloat(vehicle2MinQty)"
                   );
-                  setTotalAmount(parseFloat(subtotalAmount).toFixed(2));
+                  //line 1158
+                  setvehicleFeeSaveToDb(vehicle2Fee);
+                  setdeliveyfeeValue(expressDeliveryFee);
+                  if (!isNaN(subtotal)) {
+                    setTotalAmount(subtotal.toFixed(2));
+                  } else {
+                    setTotalAmount("Total Amount");
+                  }
                 } else {
-                  setTotalAmount("Total Amount");
+                  console.log("Vehicle2Fee is not available or has no value");
+                  // Handle the case when vehicle1Fee is not present or has no value
                 }
-              } else {
-                //if the qty is 6 up
-                console.log("total quantity is 1 ", totalQuantity);
-                const subtotalAmount =
-                  totalInitialAmount + parseFloat(vehicle1Fee);
-                setvehicleFeeSaveToDb(vehicle1Fee);
-                if (!isNaN(parseFloat(subtotalAmount).toFixed(2))) {
+              }
+
+              if (
+                totalQuantity > parseFloat(vehicle3MinQty) ||
+                totalQuantity <= parseFloat(vehicle3MaxQty)
+              ) {
+                if (vehicle3Fee !== "") {
+                  subtotal =
+                    totalInitialAmount +
+                    parseFloat(vehicle3Fee) +
+                    parseFloat(expressDeliveryFee);
                   console.log(
-                    "ORDER TYPE IS DELIVERY, DELIVERY TYPE IS STANDARD----> QUANTITY is 1",
-                    subtotalAmount
+                    "Express but less than distance-->Expressvehicle3MinQty && vehicle3MaxQty&& totalQuantity > parseFloat(vehicle3MinQty)"
                   );
-                  setTotalAmount(parseFloat(subtotalAmount).toFixed(2));
+                  //line 1158
+                  setvehicleFeeSaveToDb(vehicle3Fee);
+                  setdeliveyfeeValue(expressDeliveryFee);
+                  if (!isNaN(subtotal)) {
+                    setTotalAmount(subtotal.toFixed(2));
+                  } else {
+                    setTotalAmount("Total Amount");
+                  }
                 } else {
-                  setTotalAmount("Total Amount");
+                  console.log("Vehicle2Fee is not available or has no value");
+                  // Handle the case when vehicle1Fee is not present or has no value
+                }
+              }
+              if (
+                totalQuantity > parseFloat(vehicle4MinQty) ||
+                totalQuantity <= parseFloat(vehicle4MaxQty)
+              ) {
+                if (vehicle4Fee !== "") {
+                  subtotal =
+                    totalInitialAmount +
+                    parseFloat(vehicle4Fee) +
+                    parseFloat(expressDeliveryFee);
+                  console.log(
+                    "Express but less than distance-->vehicle4MinQty && vehicle4MaxQty&& totalQuantity > parseFloat(vehicle4MinQty)"
+                  );
+                  //line 1158
+                  setvehicleFeeSaveToDb(vehicle4Fee);
+                  setdeliveyfeeValue(expressDeliveryFee);
+                  if (!isNaN(subtotal)) {
+                    setTotalAmount(subtotal.toFixed(2));
+                  } else {
+                    setTotalAmount("Total Amount");
+                  }
+                } else {
+                  console.log("Vehicle2Fee is not available or has no value");
+                  // Handle the case when vehicle1Fee is not present or has no value
                 }
               }
             }
@@ -1550,20 +2331,38 @@ export default function CartScreen() {
                 setShowModal_ModeOfPayment(true);
               }
             } else if (selectedpaymenthod === "Points") {
-              if (
-                rewardScreenNewModeOfPayment === "Gcash" &&
-                gcashProofImage === null
-              ) {
-                setShowModal_ModeOfPayment(true);
-              } else {
-                createOrder(customerData.cusId, gcashProoflink_Storage);
-                ToastAndroid.show(
-                  "Order successfully. Thank you for ordering " +
-                    passedStationName +
-                    ".",
-                  ToastAndroid.LONG
-                );
-              }
+              Alert.alert(
+                "Warning",
+                "Since you already placed your order, you cannot cancel anymore.",
+                [
+                  {
+                    text: "Proceed",
+                    onPress: () => {
+                      // console.log("proceed press");
+                      // navigation.navigate("RewardScreen", {
+                      //   // navigation.navigate("RewardScreen", {
+                      //   passedStationName,
+                      //   selectedOrdertype,
+                      //   secondItem,
+                      //   extractedDatas,
+                      //   FinalTotalAmount: parseFloat(FinalTotalAmount),
+                      //   customerData,
+                      //   selectedItem,
+                      //   paymentMethods,
+                      //   gcashNumber,
+                      //   createOrder: createOrderFunction,
+                      // });
+                      setShowRewardsPointsModal(true);
+                    },
+                  },
+                  {
+                    text: "Cancel",
+                    onPress: () => {
+                      console.log("Cancel press");
+                    },
+                  },
+                ]
+              );
             } else {
               createOrder(customerData.cusId, gcashProoflink_Storage);
               ToastAndroid.show(
@@ -1578,6 +2377,7 @@ export default function CartScreen() {
       }
     }
   };
+  const [createOrderFunction, setcreateOrderFunction] = useState();
   //console.log("babaw sa createOrder", gcashProoflink_Storage);
   const createOrder = (CUSTOMERID, gcashProoflink_Storage) => {
     const RandomId = Math.floor(Math.random() * 50000) + 10000;
@@ -1620,6 +2420,8 @@ export default function CartScreen() {
         order_ProductPrice:
           +item.pro_refillPrice || +item.thirdparty_productPrice,
         qtyPerItem: count[item.pro_refillId || item.thirdparty_productId] || 0,
+        order_ProductDiscount:
+          item.pro_discount || item.thirdparty_productDiscount,
       })),
 
       order_newDeliveryAddressOption:
@@ -1645,7 +2447,7 @@ export default function CartScreen() {
         reservationDate_ReserveDeliveryTypes || null,
       order_deliveryReservationDeliveryReserveTime: reservationTime || null,
     };
-
+    setcreateOrderFunction(orderData);
     //flatten codes
     // passedData_SelectedItem.forEach((item, index) => {
     //   const productNamekey = `productName${index + 1}`;
@@ -1893,9 +2695,10 @@ export default function CartScreen() {
       orderID: newOrderKey,
       cusId: CUSTOMERID,
       orderDate: currentDate,
-      logsPerformed: action,
+      action: action,
       pointsUpdate: pointsUpdate,
       pointsAddedValue: pointsTobeAddedd,
+      adminId: passedAdminID,
     })
       .then(async () => {
         // console.log('Test if Save to db-----'+reservationDate );
@@ -1946,6 +2749,243 @@ export default function CartScreen() {
       });
   };
 
+  //Modal--> a codes from rewards screen and all back end codces
+  const [showRewardsPointsModal, setShowRewardsPointsModal] = useState(false);
+  const [useAllIsDisable, setUseAllIsDisable] = useState(false);
+  const [manualTextinputValue, setmanualTextinputValue] = useState("");
+  const [passedTotalAmount_RewardModal, setpassedTotalAmount_RewardModal] =
+    useState(FinalTotalAmount || 0);
+  //code for manual deduct of points
+  const manualPointsDeduct = () => {
+    //if ang ge enter na value is greater than sa customer pts
+    if (parseFloat(manualTextinputValue) > parseFloat(customerRewardsPoints)) {
+      Alert.alert("Warning", `Insufficient points balance.`);
+      setActionHasBeenTaken(true);
+    } else {
+      console.log("Input value for manual is ", manualTextinputValue);
+      console.log("Final total is", FinalTotalAmount);
+      const deductedAmount =
+        parseFloat(FinalTotalAmount) -
+        parseFloat(manualTextinputValue);
+      //const deductedAmount =
+      //parseFloat(FinalTotalAmount) + parseFloat(manualTextinputValue);
+
+      console.log("manual. remaining balance is ", deductedAmount);
+      ToastAndroid.show("Points successfully used.", ToastAndroid.LONG);
+      setFinalTotalAmount(deductedAmount);
+
+      Alert.alert(
+        "Warning",
+        `You have balance of ₱${deductedAmount.toFixed(
+          2
+        )}.  Please choose an alternative mode of payment below.`,
+        [
+          {
+            text: "Okay",
+            onPress: () => {
+              setUseAllIsDisable(false);
+              setmanualTextinputValue("");
+              setShowviewmodeofpayment(true);
+              setActionHasBeenTaken(true);
+            },
+          },
+        ]
+      );
+      //update the database
+      const customerPointsRef = ref(db, `CUSTOMER/${customerID}`); //get the db reference
+      // Use the `get` method to retrieve the current walletPoints value
+      get(customerPointsRef).then((snapshot) => {
+        const walletPoints = snapshot.val().walletPoints || 0;
+        const updatedPoints = walletPoints - parseFloat(manualTextinputValue); // convert deductedAmount to an integer
+        //setorderPoints(updatedPoints);
+        update(customerPointsRef, { walletPoints: updatedPoints })
+          .then(() => {
+            console.log(
+              "Manual Points Deduct--->Customer points updated successfully!"
+            );
+          })
+          .catch((error) => {
+            console.error("Error updating customer points: ", error);
+          });
+      });
+      //save to customer user logs
+      const btnClick = "manual";
+      const actionTaken = "pointsDeducted";
+      const userLogRandomId = Math.floor(Math.random() * 50000) + 10000;
+      const newUserlogKey = userLogRandomId;
+      set(ref(db, `CUSTOMERSLOG/${newUserlogKey}`), {
+        //orderID: newOrderKey,
+        cusId: customerID,
+        datepointsDeducted: currentDate,
+        action: actionTaken,
+        pointsDeductted: manualTextinputValue,
+        btnClick: btnClick,
+      })
+        .then(async () => {
+          // console.log('Test if Save to db-----'+reservationDate );
+          console.log(
+            "Reward screen --->New UserLog with the User ID of--->",
+            newUserlogKey
+          );
+        })
+        .catch((error) => {
+          console.log("Error Saving to Database", error);
+          alert("Error", JSON.stringify(error), "OK");
+        });
+
+      setUseAllIsDisable(false);
+      setmanualTextinputValue("");
+    }
+  };
+
+  //auto use of the points
+  const handleAutoUse = () => {
+    if (parseFloat(FinalTotalAmount) < parseFloat(customerRewardsPoints)) {
+      const deductedAmount =
+        parseFloat(customerRewardsPoints) - parseFloat(FinalTotalAmount);
+      console.log("168", parseFloat(deductedAmount));
+      //update the database
+      const customerPointsRef = ref(db, `CUSTOMER/${customerID}`); //get the db reference
+      // Use the `get` method to retrieve the current walletPoints value
+      get(customerPointsRef).then((snapshot) => {
+        const walletPoints = snapshot.val().walletPoints || 0;
+        const updatedPoints = deductedAmount.toFixed(2); // convert deductedAmount to an integer
+        //setorderPoints(updatedPoints);
+        update(customerPointsRef, { walletPoints: parseFloat(updatedPoints) })
+          .then(() => {
+            console.log("--->Customer points updated successfully!");
+          })
+          .catch((error) => {
+            console.error("Error updating customer points: ", error);
+          });
+      });
+
+      //save to customer user logs
+      const actionTaken = "pointsDeducted";
+      const btnClick = "use all";
+      const userLogRandomId = Math.floor(Math.random() * 50000) + 10000;
+      const newUserlogKey = userLogRandomId;
+      set(ref(db, `CUSTOMERSLOG/${newUserlogKey}`), {
+        //orderID: newOrderKey,
+        cusId: customerID,
+        datepointsDeducted: currentDate,
+        action: actionTaken,
+        pointsDeductted: FinalTotalAmount,
+        btnClick: btnClick,
+      })
+        .then(async () => {
+          // console.log('Test if Save to db-----'+reservationDate );
+          ToastAndroid.show("Points successfully used.", ToastAndroid.LONG);
+          setActionHasBeenTaken(false);
+          setFinalTotalAmount(0);
+          console.log(
+            "Reward screen --->New UserLog with the UserLog ID of-------------------------->",
+            newUserlogKey
+          );
+        })
+        .catch((error) => {
+          console.log("Error Saving to Database", error);
+          alert("Error", JSON.stringify(error), "OK");
+        });
+    } else {
+      //if passed total amount is greater than customer points
+      setAutoUsePoints(true);
+      const deductedAmount =
+        parseFloat(passedTotalAmount_RewardModal) - customerRewardsPoints;
+      console.log("Deducted Amount is ", deductedAmount);
+      //const roundedPoints = (0).toFixed(2); // round to 2 decimal places
+      //setcustomerRewardsPoints(roundedPoints);
+      ToastAndroid.show("Points successfully used.", ToastAndroid.LONG);
+      setFinalTotalAmount(deductedAmount.toFixed(2));
+
+      Alert.alert(
+        "Warning",
+        `You have balance of ₱${deductedAmount.toFixed(
+          2
+        )}.  Please choose an alternative mode of payment below.`,
+        [
+          {
+            text: "Okay",
+            onPress: () => {
+              setShowviewmodeofpayment(true);
+              setActionHasBeenTaken(true);
+            },
+          },
+        ]
+      );
+      //update the database
+      const customerPointsRef = ref(db, `CUSTOMER/${customerID}`); //get the db reference
+      // Use the `get` method to retrieve the current walletPoints value
+      get(customerPointsRef).then((snapshot) => {
+        const walletPoints = snapshot.val().walletPoints || 0;
+        const updatedPoints = 0; // convert deductedAmount to an integer
+        //setorderPoints(updatedPoints);
+        update(customerPointsRef, { walletPoints: updatedPoints })
+          .then(() => {
+            console.log("--->Customer points updated successfully!");
+          })
+          .catch((error) => {
+            console.error("Error updating customer points: ", error);
+          });
+      });
+
+      //save to customer user logs
+      const actionTaken = "pointsDeducted";
+      const btnClick = "use all";
+      const userLogRandomId = Math.floor(Math.random() * 50000) + 10000;
+      const newUserlogKey = userLogRandomId;
+      set(ref(db, `CUSTOMERSLOG/${newUserlogKey}`), {
+        //orderID: newOrderKey,
+        cusId: customerID,
+        orderDate: currentDate,
+        action: actionTaken,
+        pointsDeductted: customerRewardsPoints,
+        btnClick: btnClick,
+      })
+        .then(async () => {
+          // console.log('Test if Save to db-----'+reservationDate );
+          console.log(
+            "Reward screen --->New UserLog with the User ID of--->",
+            newUserlogKey
+          );
+        })
+        .catch((error) => {
+          console.log("Error Saving to Database", error);
+          alert("Error", JSON.stringify(error), "OK");
+        });
+    }
+  };
+  const [selectedNewpaymenthod, setselectedNewPaymentMethod] = useState();
+  const [receiverModeOfPayment, setreceiverModeOfPayment] = useState();
+  const [showviewmodeofpayment, setShowviewmodeofpayment] = useState(false);
+  useLayoutEffect(() => {
+    if (paymentMethods) {
+      const updatedPaymentMethods = paymentMethods.filter(
+        (method) => method.label !== "Points"
+      );
+      setreceiverModeOfPayment(updatedPaymentMethods);
+      //console.log("udpated mode of payment",updatedPaymentMethods)
+    }
+  }, [paymentMethods]);
+
+  const [actionHasBeenTaken, setActionHasBeenTaken] = useState(false); //flag to track if user click something in this codes
+
+const [checkedItemKey_newpaymentMethod, setCheckedItemKey_newpaymentMethod] =
+    useState(null);
+    const handleItemchecked_newpaymentMethod = (item) => {
+      setCheckedItemKey_paymentMethod(
+        item.key === checkedItemKey_paymentMethod ? null : item.key
+      );
+      if (item.value === "CashOnDelivery") {
+        // console.log("COD");
+        // if (selectedOrdertype === "PickUp") {
+        //   Alert.alert("To our beloved customer", "COD is only for delivery.");
+        // }
+      } else {
+        // console.log("GCASH");
+        // setShowModal_ModeOfPayment(true);
+      }
+    };
   {
     /*RETURN JSX */
   }
@@ -2350,6 +3390,334 @@ export default function CartScreen() {
         </Modal>
       )}
 
+      {/*Modal for rewards screen */}
+      <Modal
+        transparent
+        onRequestClose={() => {
+          setShowRewardsPointsModal(false);
+        }}
+        visible={showRewardsPointsModal}
+      >
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: "#00000099",
+          }}
+        >
+          <View style={styles.rewardsModal}>
+            <View style={styles.rewardsModalTitle}>
+              
+              <Text
+                style={{
+                  marginTop: 8,
+                  marginLeft: 0,
+                  fontFamily: "nunito-bold",
+                  fontSize: 20,
+                }}
+              >
+                Reward Points
+              </Text>
+              <View style={{ flex: 1, marginTop: 2 }} />
+              {/* <TouchableOpacity
+                onPress={() => {
+                  setShowModal_ModeOfPayment(false);
+                  setGgcashProofImage(null);
+                }}
+              >
+                <AntDesign
+                  name="close"
+                  size={20}
+                  color="black"
+                  style={{ marginTop: 5 }}
+                />
+              </TouchableOpacity> */}
+            </View>
+            <View style={StylesRewardsPoints.wrapperWaterProduct}>
+              <Text style={StylesRewardsPoints.waterProdStyle}>
+                Current rewards points
+              </Text>
+
+              <View style={StylesRewardsPoints.pointsItem}>
+                 <View style={StylesRewardsPoints.circular}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      console.log("use all is press");
+                      handleAutoUse();
+                    }}
+                    // disabled={
+                    //   (customerRewardsPoints === 0 && useAllIsDisable) ||
+                    //   manualTextinputValue !== null
+                    // }
+
+                    disabled={
+                      customerRewardsPoints === 0 ||
+                      useAllIsDisable ||
+                      FinalTotalAmount === 0
+                    }
+                    // disabled={
+                    //   customerRewardsPoints === 0 ||
+                    //   useAllIsDisable
+                    // }
+                  >
+                    <View
+                      style={{
+                        padding: 6,
+                        // backgroundColor: "#55BCF6",
+                        backgroundColor:
+                          customerRewardsPoints === 0 ||
+                          useAllIsDisable ||
+                          FinalTotalAmount === 0
+                            ? "gray"
+                            : "#55BCF6",
+                        // backgroundColor:
+                        // customerRewardsPoints === 0 ||
+                        // useAllIsDisable
+                        //   ? "gray"
+                        //   : "#55BCF6",
+                        borderRadius: 5,
+                        top: 1,
+                        opacity: 0.8,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          textAlign: "center",
+                          fontFamily: "nunito-bold",
+                        }}
+                      >
+                        Use all
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      top: 15,
+                      backgroundColor: "transparent",
+                      width: 250,
+                    }}
+                  >
+                    <TouchableOpacity
+                      onPress={() => {
+                        console.log("Manual is press");
+                        manualPointsDeduct();
+                      }}
+                      disabled={
+                        customerRewardsPoints === 0 ||
+                        !manualTextinputValue ||
+                        manualTextinputValue === null ||
+                        manualTextinputValue === "" ||
+                        FinalTotalAmount === 0
+                      }
+                      // disabled={
+                      //   customerRewardsPoints === 0 ||
+                      //   !manualTextinputValue ||
+                      //   manualTextinputValue === null ||
+                      //   manualTextinputValue === ""
+
+                      // }
+                    >
+                      <View
+                        style={{
+                          padding: 6,
+                          backgroundColor:
+                            customerRewardsPoints === 0 ||
+                            !manualTextinputValue ||
+                            FinalTotalAmount === 0 ||
+                            FinalTotalAmount === 0.0
+                              ? "gray"
+                              : "#55BCF6",
+                          // backgroundColor:
+                          //   customerRewardsPoints === 0 ||
+                          //   !manualTextinputValue
+
+                          //     ? "gray"
+                          //     : "#55BCF6",
+
+                          borderRadius: 5,
+                          //top: 15,
+
+                          opacity: 0.8,
+                          width: 75,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            textAlign: "center",
+                            fontFamily: "nunito-bold",
+                          }}
+                        >
+                          Manual
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        borderBottomColor: "black",
+                        borderBottomWidth: 1,
+                        paddingBottom: 0,
+
+                        width: 80,
+                        //marginTop: 10,  onChangeText={(text) => setinput_SwapWithReservation(text)}
+                        marginLeft: 20,
+                        alignContent: "center",
+                      }}
+                    >
+                      <TextInput
+                        placeholder="Enter amount"
+                        style={[
+                          globalStyles.login_Email_textInput,
+                          {
+                            fontSize: 15,
+                            textAlignVertical: "center",
+                            textAlign: "center",
+                            width: 80,
+                          },
+                        ]}
+                        onChangeText={(text) => {
+                          setmanualTextinputValue(text.replace(/[^0-9]/g, ""));
+
+                          setUseAllIsDisable(true);
+                          if (text === "") {
+                            setUseAllIsDisable(false);
+                          } else {
+                            setUseAllIsDisable(true);
+                          }
+                        }}
+                        // onChangeText={onChangeText}
+                        keyboardType="numeric"
+                        value={manualTextinputValue}
+                        editable={
+                          customerRewardsPoints != 0 ||
+                          passedTotalAmount_RewardModal != 0.0
+                        }
+                        // editable={
+                        //   customerRewardsPoints != 0
+
+                        // }
+                      />
+                    </View>
+                  </View>
+                </View>
+
+               <View style={StylesRewardsPoints.viewPoints}>
+                  <Text style={{ fontSize: 33, textAlign: "center", top: 10 }}>
+                    {customerRewardsPoints || 0}
+                  </Text>
+                </View>
+             
+             
+              </View>
+              <View
+                  style={{
+                    backgroundColor: "transparent",
+                    top: 20,
+                    padding: 8,
+                    flexDirection: "row-reverse",
+                  }}
+                >
+                  <Text style={{ fontSize: 18, fontFamily: "nunito-semibold" }}>
+                    Total Amount - ₱
+                    {parseFloat(FinalTotalAmount).toFixed(2) || 0}
+
+                  </Text>
+                </View>
+                  {/* code for new mode of payment */}
+          {showviewmodeofpayment && (
+            <View style={StylesRewardsPoints.viewForModeofPayment}>
+              <Text
+                style={{
+                  fontSize: 17,
+                  fontFamily: "nunito-semibold",
+                  marginLeft: 5,
+                }}
+              >
+                Mode of payment
+              </Text>
+              {receiverModeOfPayment &&
+                receiverModeOfPayment.map((item) => {
+                  const isChecked = item.key === checkedItemKey_newpaymentMethod;
+                  const isCODDisabled =
+                    selectedOrdertype === "PickUp" &&
+                    item.label === "CashOnDelivery";
+                  return (
+                    <View
+                      key={item.key}
+                      style={{
+                        // backgroundColor: "red",
+                        marginTop: 35,
+                        height: 25,
+                        borderRadius: 5,
+                        padding: 0,
+                        flexDirection: "row",
+                        width: 110,
+
+                        justifyContent: "center",
+                        marginLeft: -95,
+                        marginRight: 110,
+                        // elevation: 2,
+                        alignItems: "center",
+                      }}
+                    >
+                      <TouchableOpacity
+                        onPress={() => {
+                          handleItemchecked_newpaymentMethod(item);
+                          setselectedNewPaymentMethod(item.value);
+                          setCheckedItemKey_newpaymentMethod(item.key);
+                          console.log("payment clicked Value -->", item.value);
+                        }}
+                        disabled={isCODDisabled}
+                      >
+                        <View
+                          style={{
+                            width: 20,
+                            height: 20,
+                            borderWidth: 1,
+                            borderRadius: 4,
+                            justifyContent: "center",
+                            alignItems: "center",
+                            marginLeft: 10,
+                            marginRight: 5,
+                            //backgroundColor:'blue'
+                            borderColor: isCODDisabled ? "gray" : "black",
+                            //borderColor:selectedOrdertype==="PickUp"? "gray" : "black",
+                          }}
+                        >
+                          {isChecked && (
+                            <MaterialIcons
+                              name="done"
+                              size={16}
+                              color="black"
+                              styles={{ alignItems: "center" }}
+                            />
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                      <Text
+                        style={{
+                          fontFamily: "nunito-light",
+                          fontSize: 17,
+                          flexDirection: "row",
+                          color: isCODDisabled ? "gray" : "black",
+                          // color: "black",
+                        }}
+                      >
+                        {item.label}
+                      </Text>
+                    </View>
+                  );
+                })}
+            </View>
+          )}
+            </View>
+          </View>
+        </View>
+      </Modal>
       <FlatList
         data={
           passedData_SelectedItem ? Object.values(passedData_SelectedItem) : []
@@ -2540,7 +3908,7 @@ export default function CartScreen() {
         <View
           style={{
             backgroundColor: "transparent",
-            height: responsiveHeight(80),
+            height: responsiveHeight(85),
             top: 0,
           }}
         >
@@ -2936,11 +4304,14 @@ export default function CartScreen() {
             <View style={styles.viewDeliveryAddress}>
               <TouchableOpacity
                 onPress={() => {
+                  // console.log(
+                  //   "line 2638 cart screen",
+                  //   parseFloat(passedTotalAmount)
+                  // );
                   console.log(
-                    "line 2638 cart screen",
-                    parseFloat(passedTotalAmount)
+                    "Cart screen-->Total Final Amount send to New delivery address",
+                    FinalTotalAmount
                   );
-                  console.log("cart screen", selectedReserveDeliveryType);
                   navigation.navigate("NewDeliveryAdd", {
                     adminLatt,
                     adminLong,
@@ -2948,14 +4319,15 @@ export default function CartScreen() {
                     passedStationName,
                     selectedItem,
                     extractedDatas,
-                    passedTotalAmount:
-                      parseFloat(passedTotalAmount) || FinalTotalAmount,
+                    // passedTotalAmount:
+                    //   parseFloat(passedTotalAmount) || FinalTotalAmount,
+                    FinalTotalAmount,
                     rewardScreenNewModeOfPayment,
                     selectedpaymenthod,
                     selectedReserveDeliveryType,
                     selectedDeliveryType,
                     paramnewDeliveryDetails,
-                    totalQuantity
+                    totalQuantity,
                   });
                   // console.log("test 1009", selectedItem);
                 }}
@@ -3019,8 +4391,30 @@ export default function CartScreen() {
               </Text>
             </View>
 
-            {/* Sub  Total amount */}
+            {/* vehicle fee */}
+            <View
+              style={{
+                paddingHorizontal: 30,
+                // backgroundColor: "red",
+                top: 20,
+                flexDirection: "row-reverse",
+                width: 350,
+                justifyContent: "flex-start",
+                left: 10,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 16,
+                  fontFamily: "nunito-semibold",
+                  textAlign: "right",
+                }}
+              >
+                Vehicle Fee- ₱ {(vehicleFeeSaveToDb && vehicleFeeSaveToDb) || 0}
+              </Text>
+            </View>
 
+            {/* Sub  Total amount */}
             <View
               style={{
                 paddingHorizontal: 30,
@@ -3039,8 +4433,7 @@ export default function CartScreen() {
                   textAlign: "right",
                 }}
               >
-             Sub Total - ₱ {((totalAmount && totalAmount) || 0)}
-
+                Sub Total - ₱ {(totalAmount && totalAmount) || 0}
               </Text>
             </View>
 
@@ -3083,7 +4476,6 @@ export default function CartScreen() {
                 {isNaN(FinalTotalAmount)
                   ? "0"
                   : (parseFloat(FinalTotalAmount) || 0).toFixed(2)}
-            
               </Text>
             </View>
             {/* button for place oder */}
@@ -3097,8 +4489,8 @@ export default function CartScreen() {
             >
               <View
                 style={{
-                  //backgroundColor: "red",
-                  marginTop: 10,
+                  backgroundColor: "transparent",
+                  marginTop: 30,
                   height: 50,
                 }}
               >
@@ -3118,7 +4510,7 @@ export default function CartScreen() {
                       paddingHorizontal: 10,
                       // backgroundColor: isDisabled ? "gray" : "#87cefa",
                       backgroundColor: "#87cefa",
-                      marginTop: 20,
+                      marginTop: 0,
                       //marginBottom: 20,
                       width: 200,
                       left: 70,
@@ -3151,6 +4543,23 @@ export default function CartScreen() {
 }
 
 const styles = StyleSheet.create({
+  rewardsModalTitle: {
+    justifyContent: "flex-start",
+    padding: 0,
+    flexDirection: "row",
+    marginLeft: 5,
+    padding: 4,
+  },
+  rewardsModal: {
+    width: responsiveWidth(95),
+    height: responsiveHeight(80),
+    backgroundColor: "white",
+    borderBottomColor: "gray",
+    borderBottomWidth: 1,
+    borderRadius: 3,
+    elevation: 10,
+    marginBottom: 50,
+  },
   viewReservationTimeDeliveryTypes: {
     backgroundColor: "whitesmoke",
     width: 170,

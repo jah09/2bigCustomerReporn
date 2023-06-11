@@ -1300,10 +1300,10 @@ export default function CreateAccountPage({ navigation }) {
                   </View>
                 </View>
               </Modal>
-              {/* <Text style={{fontFamily:"nunito-semibold"}}>By Signing Up, you agree to our</Text>
+              <Text style={{fontFamily:"nunito-semibold"}}>By Signing Up, you agree to our</Text>
               <TouchableOpacity onPress={onPressHandler_forTerms}>
                   <Text style={{fontWeight:"bold"}}> Terms and Conditions</Text>
-                </TouchableOpacity> */}
+                </TouchableOpacity>
               {/*for for signUP button */}
 
               {email == "" || checkValidEmail == true ? (
