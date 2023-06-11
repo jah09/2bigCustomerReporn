@@ -29,8 +29,7 @@ import { NotificationContext } from "../shared/NotificationContext";
 
 
 export default function NotificationScreen() {
-  const [readNotifications, setReadNotifications] = useState([]);
-  console.log("readNotifications:", readNotifications);
+  
   const [currentTime, setCurrentTime] = useState(new Date());
   const { unreadCount, updateUnreadCount } = useContext(NotificationContext);
   const navigation = useNavigation();
@@ -44,9 +43,9 @@ export default function NotificationScreen() {
       if (customerData) {
         const customerId = customerData.cusId;
 
-        console.log("CUSTOMER:", customerId);
+      //  console.log("CUSTOMER:", customerId);
         const notificationsRef = ref(db, "NOTIFICATION/");
-        console.log("NOTIF TABLE:", notificationsRef);
+      //  console.log("NOTIF TABLE:", notificationsRef);
         const notificationsQuery = query(
           notificationsRef,
           orderByChild("cusId"),
@@ -56,8 +55,7 @@ export default function NotificationScreen() {
           notificationsQuery,
           (snapshot) => {
             if (snapshot.exists()) {
-              const data = snapshot.val();
-
+              const data = snapshot.val(); 
               const NotifInformation = Object.keys(data)
                 .map((key) => ({
                   id: key,
@@ -93,17 +91,18 @@ export default function NotificationScreen() {
                   (notification) => notification.status === "read"
                 )
               );
+
               console.log("READNotifInformation:", NotifInformation);
               const unreadNotifications = NotifInformation.filter(
                 (notification) => notification.status === "unread"
               );
-              console.log("UNREAD:", unreadNotifications);
+             // console.log("UNREAD:", unreadNotifications);
               updateUnreadCount(unreadNotifications.length);
 
               const scheduledNotifications = NotifInformation.filter(
                 (notification) => notification.title === "Order Reminder"
               );
-              // console.log("SCHED:", scheduledNotifications);
+               console.log("SCHED:", scheduledNotifications);
               displayScheduledNotificationsAsToasts(scheduledNotifications);
             }
           },
@@ -123,6 +122,8 @@ export default function NotificationScreen() {
     return () => clearInterval(intervalId);
   }, []);
   const [notifications, setNotifications] = useState([]);
+  const [readNotifications, setReadNotifications] = useState([]);
+  console.log("readNotifications:", readNotifications);
 
   // console.log("Notification:", notifications);
 
@@ -130,7 +131,6 @@ export default function NotificationScreen() {
   const displayScheduledNotificationsAsToasts = (scheduledNotifications) => {
     scheduledNotifications.forEach((notification) => {
       const currentDate = new Date();
-
       //console.log("CURRENT:", currentDate);
       const scheduledSentDate = new Date(notification.scheduledSent);
       // console.log("Sched date:", scheduledSentDate);
@@ -259,6 +259,7 @@ export default function NotificationScreen() {
       );
     }
   };
+  
   const handleDeleteNotification = (notificationID) => {
     setNotifications(
       notifications.filter(
@@ -445,6 +446,7 @@ const styles = StyleSheet.create({
   },
   toastContainer: {
     backgroundColor: "#333333",
+
     borderRadius: 8,
     padding: 10,
     marginHorizontal: 20,
