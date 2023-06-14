@@ -25,6 +25,7 @@ import moment from "moment";
 import { NotificationContext } from "../shared/NotificationContext";
 
 export default function NotificationScreen() {
+
   const [currentTime, setCurrentTime] = useState(new Date());
   const { unreadCount, updateUnreadCount } = useContext(NotificationContext);
   const navigation = useNavigation();
@@ -41,6 +42,7 @@ export default function NotificationScreen() {
         //console.log("CUSTOMER:", customerId);
         const notificationsRef = ref(db, "NOTIFICATION/");
         //console.log("NOTIF TABLE:", notificationsRef);
+
         const notificationsQuery = query(
           notificationsRef,
           orderByChild("cusId"),
@@ -50,7 +52,9 @@ export default function NotificationScreen() {
           notificationsQuery,
           (snapshot) => {
             if (snapshot.exists()) {
+
               const data = snapshot.val();
+
               const NotifInformation = Object.keys(data)
                 .map((key) => ({
                   id: key,
@@ -85,7 +89,9 @@ export default function NotificationScreen() {
                   (notification) => notification.status === "read" 
                 )
               );
+
               //console.log("READNotifInformation:", NotifInformation);
+
               const unreadNotifications = NotifInformation.filter(
                 (notification) => notification.status === "unread"
               );
@@ -95,7 +101,9 @@ export default function NotificationScreen() {
               const scheduledNotifications = NotifInformation.filter(
                 (notification) => notification.title === "Order Reminder"
               );
+
              // console.log("SCHED:", scheduledNotifications);
+
               displayScheduledNotificationsAsToasts(scheduledNotifications);
             }
           },
@@ -116,7 +124,9 @@ export default function NotificationScreen() {
   }, []);
   const [notifications, setNotifications] = useState([]);
   const [readNotifications, setReadNotifications] = useState([]);
+
  // console.log("readNotifications:", readNotifications);
+
 
   // console.log("Notification:", notifications);
   const displayScheduledNotificationsAsToasts = (scheduledNotifications) => {
@@ -124,6 +134,9 @@ export default function NotificationScreen() {
     const currentDateString = currentDate.toDateString(); // Get the date portion as a string
   
     scheduledNotifications.forEach((notification) => {
+
+      const currentDate = new Date();
+      //console.log("CURRENT:", currentDate);
       const scheduledSentDate = new Date(notification.scheduledSent);
       const scheduledDateString = scheduledSentDate.toDateString(); // Get the date portion as a string
     // console.log("DATEEEEE:", scheduledDateString);
@@ -437,6 +450,7 @@ const styles = StyleSheet.create({
   },
   toastContainer: {
     backgroundColor: "#333333",
+
     borderRadius: 8,
     padding: 10,
     marginHorizontal: 20,

@@ -39,7 +39,7 @@ export default function NewDeliveryAddressScreen({ navigation }) {
     item,
     selectedReserveDeliveryType,
     selectedItem,
-    passedTotalAmount,
+    FinalTotalAmount,
    
     selectedpaymenthod,
     rewardScreenNewModeOfPayment,
@@ -49,11 +49,10 @@ export default function NewDeliveryAddressScreen({ navigation }) {
     totalQuantity,
   } = route.params ?? {
     passedStationName: null,
-    passedTotalAmount,
+   
   };
 
-  // console.log("Receiver new delivery address->selected delivery type",selectedDeliveryType,
-  // );
+
   // console.log("Receiver new delivery address->selected delivery type",adminLatt, adminLong
   // );
   //button disable
@@ -66,15 +65,20 @@ export default function NewDeliveryAddressScreen({ navigation }) {
   const [newDeliveryDetails, setnewDeliveryDetails] = useState(
     paramnewDeliveryDetails
   );
+  const [passedTotalAmount_NewDeliveryScreen, setpassedTotalAmount_NewDeliveryScreen] = useState(
+    FinalTotalAmount || 0
+  );
+  console.log("New Delivery Screen---> from Cart screen",passedTotalAmount_NewDeliveryScreen,
+  );
  // const [passedTotalAmount,setpassedTotalAmount]=useState(passedTotalAmount);
    //const [totalAmount,setTotalAmount]=useState(passedTotalAmount);
   const [tempDeliveryFee, settempDeliveryFee] = useState(deliveyfeeValue||0);
   const [newDeliveryFee, setNewDeliveryFee] = useState();
-  console.log("passed total amount",passedTotalAmount);
+ 
  
   console.log("New delivery fee", newDeliveryFee);
   console.log("Receiver new delivery address", tempDeliveryFee);
-  console.log("Receiver new delivery address---->Passed total amount from cart screen",passedTotalAmount,typeof passedTotalAmount)
+  // console.log("Receiver new delivery address---->Passed total amount from cart screen",passedTotalAmount,typeof passedTotalAmount)
   const DeliveryAddressOption = [
     {
       label: "Same as Home Address",
@@ -123,13 +127,12 @@ export default function NewDeliveryAddressScreen({ navigation }) {
           text: "OK",
           onPress: () => {
             // console.log("same as home",passedTotalAmount,FinalTotalAmount)
-            //console.log("same as home send to cart screen",selectedpaymenthod)
+            console.log("Same as home send to cart screen",passedTotalAmount_NewDeliveryScreen)
             navigation.navigate("CartScreen", {
               combinedData,
               extractedDatas,
               selectedItem,
-              passedTotalAmount:
-                parseFloat(passedTotalAmount),
+              passedTotalAmount_NewDeliveryScreen,
               rewardScreenNewModeOfPayment,
               selectedpaymenthod,
               selectedReserveDeliveryType,

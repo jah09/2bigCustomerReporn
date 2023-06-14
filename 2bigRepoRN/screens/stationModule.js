@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Image,
   StatusBar,
+  Alert
 } from "react-native";
 import { db } from "../firebaseConfig";
 import React, { useEffect, useState, useContext, useLayoutEffect } from "react";
@@ -133,8 +134,14 @@ export default function StationModule() {
                     // console.log(
                     //   "Station Screen--Sending Data ----" + JSON.stringify(item)
                     // );
+                    if(item.currentSubscription && item.currentSubscription==="LimitReached"){
+                      Alert.alert("Warning","This store is not available for now.")
+                    }
+                    else{
+                      navigation.navigate("toProductScreen", { item });
+                    }
 
-                    navigation.navigate("toProductScreen", { item });
+                  
                   }}
                   // disabled={
                   //   item.Subscribed_Package &&
@@ -143,7 +150,7 @@ export default function StationModule() {
                   //   ((item.Subscribed_Package[0].orderLimit = 10), true)
                   // }
                   
-                  disabled={item.currentSubscription && item.currentSubscription==="LimitReached"}
+                 // disabled={item.currentSubscription && item.currentSubscription==="LimitReached"}
                 >
                   <View style={styles.item} key={item.idno}>
                     <View style={styles.itemLeft}>

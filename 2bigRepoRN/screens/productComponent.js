@@ -272,13 +272,13 @@ export default function ProductComponent() {
 
   const [newDeliveryDetails, setnewDeliveryDetails] = useState();
   useEffect(() => {
-    const otherProducts = ref(db, "DELIVERY_DETAILS2/");
+    const otherProducts = ref(db, "DELIVERY_DETAILS/");
     const otherProductsQuery = query(
       otherProducts,
       orderByChild("adminId"),
       equalTo(selectedStationID)
     );
-
+   // console.log("test if naa data--> data from rhea",otherProductsQuery)
     const unsubscribe = onValue(otherProductsQuery, (snapshot) => {
       const data = snapshot.val();
       if (data && Object.keys(data).length > 0) {
@@ -288,6 +288,7 @@ export default function ProductComponent() {
           ...data[key],
         }));
         setnewDeliveryDetails(otherProductsInfo);
+      //  console.log("test if naa data--> data from rhea",otherProductsInfo)
       }
 
       //console.log("test if naa data--> data from rhea",otherProductsInfo)
@@ -300,10 +301,14 @@ export default function ProductComponent() {
   const [swapOptions, setSwapOptions] = useState([]);
 
   useEffect(() => {
-    const SwapOptions = newDeliveryDetails?.[0].swapOptions.split(", ");
-
-    if (SwapOptions && SwapOptions[0]) {
-      const splitValuesSwapOptionArray = SwapOptions.map((type, index) => ({
+    //const SwapOptions = newDeliveryDetails?.[0].swapOptions.split(",");
+    // const paymentMethodsString = newDeliveryDetails[0]?.paymentMethods || "";
+    // // const splitPaymentMethods = paymentMethodsString.split(',');
+    // const splitPaymentMethods = paymentMethodsString.split(/,\s*|\s*,\s*/);
+    const SwapOptions =newDeliveryDetails?.[0].swapOptions||"";
+    const splitSwapOptions=SwapOptions.split(/,\s*|\s*,\s*/);
+    if (splitSwapOptions && splitSwapOptions[0]) {
+      const splitValuesSwapOptionArray = splitSwapOptions.map((type, index) => ({
         label: type,
         value: type.toString(),
         key: index + 1,
@@ -452,7 +457,7 @@ export default function ProductComponent() {
       selectedItem,
       storeName,
       extractedDatas,
-
+      
       totalPickUpfee,
       input_PickupRequest: input_PickupRequest ?? null,
       input_SwapWithReservation: input_SwapWithReservation ?? null,
@@ -498,6 +503,8 @@ export default function ProductComponent() {
                   setinput_PickupRequest(false);
                   settotalPickUpfee(0);
                   setselectedSwaption(null);
+                  setshowPickUpInputfield(false);
+
                 }}
               >
                 <AntDesign
@@ -888,6 +895,7 @@ export default function ProductComponent() {
               data={thirdPartyProducts}
               keyExtractor={(item, index) => item.thirdparty_productId}
               renderItem={({ item }) => (
+                
                 <View
                   style={styles.viewWaterItem_otherProduct}
                   key={item.thirdparty_productId}
