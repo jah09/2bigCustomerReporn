@@ -93,7 +93,9 @@ export default function LoginModule({ navigation, route }) {
       const user = userCredential.user;
       console.log("Logged in with:", inputtedpassword);
       const customerData = await fetchCustomerData(email,inputtedpassword);
+
     ///  console.log("Data:", customerData);
+
       if (customerData) {
         await storeCustomerData(customerData);
         await logCustomerLogin(customerData);
@@ -126,8 +128,10 @@ export default function LoginModule({ navigation, route }) {
       const storedPassword = customerData.password;
       const customerId=customerData.cusId;
       setCustomerID(customerId)
+
       //  console.log("line 126",storedPassword)
        // console.log("line 127",inputtedpassword)
+
       // Compare the hashed passwords
       if (inputtedpassword === storedPassword) {
         return customerData;
@@ -152,7 +156,9 @@ export default function LoginModule({ navigation, route }) {
   
 
   const logCustomerLogin = async (customerData) => {
+
    // console.log("line 153",customerData)
+
     const userLogId = Math.floor(Math.random() * 50000) + 100000;
     const newUserLog = userLogId;
     const logRef = ref(db, `CUSTOMERSLOG/${newUserLog}`);
@@ -162,7 +168,9 @@ export default function LoginModule({ navigation, route }) {
       email: email,
       action: "login",
       cusId: customerData.cusId,
-      logId:newUserLog
+
+      logId: newUserLog, 
+
     };
     try {
       await set(logRef, logData);
