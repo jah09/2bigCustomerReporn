@@ -11,6 +11,7 @@ import {
   TextInput,
   ToastAndroid,
   ActivityIndicator,
+  BackHandler,
 } from "react-native";
 import moment from "moment/moment";
 import React, {
@@ -69,6 +70,7 @@ export default function CartScreen() {
     rewardScreenNewModeOfPayment,
     newDeliveryFee,
     passedTotalAmount_NewDeliveryScreen,
+    
   } = route.params ? route.params : {};
   const passedStationName =
     extractedDatas?.refillingStoreProperties?.stationName;
@@ -78,6 +80,7 @@ export default function CartScreen() {
 
   const secondItem = item;
   //setFinalTotalAmount(passedTotalAmount);
+
 
   console.log(
     "RECEIVING CART SCREEN from new  delivery screen--->Total Fee",
@@ -111,7 +114,9 @@ export default function CartScreen() {
     //  console.log("send 36",secondItem, combinedData);
     navigation.goBack();
   };
-
+  const [customerData, setCustomerData] = useState({}); //getting the customer's data from AsyncStorage
+  const [customerID, setCustomerID] = useState();
+  const [customerRewardsPoints, setcustomerRewardsPoints] = useState(0); //object
   // //get customer Data
   useEffect(() => {
     AsyncStorage.getItem("customerData") //e get ang Asycn sa login screen
@@ -120,7 +125,7 @@ export default function CartScreen() {
           //if data is not null
           const parsedData = JSON.parse(data); //then e store ang Data into parsedData
           const CustomerUID = parsedData.cusId;
-       
+          setCustomerData(parsedData);
           setCustomerID(CustomerUID);
         }
       })
@@ -130,7 +135,7 @@ export default function CartScreen() {
       });
   }, []);
   useEffect(() => {
-    // console.log("Line 58", customerID);
+    console.log("Line 58", customerID);
     if (customerID) {
       const customerRef = ref(db, "CUSTOMER/");
       //  console.log("inside this effect",customerID)
@@ -149,20 +154,23 @@ export default function CartScreen() {
           }));
           const customer = newCustomerInfo[0];
           const walletPoints = customer.walletPoints;
+
           // Update the state with the new wallet points
           setcustomerRewardsPoints(walletPoints);
-          console.log("Current rewards points of cstomer",walletPoints)
-          setCustomerData(newCustomerInfo);
+          // console.log("Current rewards points of cstomer", walletPoints);
+         // setCustomerData(newCustomerInfo);
         }
       });
     }
   }, [customerID]);
 
-  const [customerData, setCustomerData] = useState({}); //getting the customer's data from AsyncStorage
-  const [customerID, setCustomerID] = useState();
-  const [customerRewardsPoints, setcustomerRewardsPoints] = useState(0); //object
   //codees for quantity and get the initial amount-----------------------------------------------------------------------
-
+useEffect(()=>{
+if(input_PickupRequest){
+  console.log("line 195",input_PickupRequest);
+  setCount(input_PickupRequest)
+}
+},[input_PickupRequest])
   const [count, setCount] = useState({});
 
   const [initialAmount, setInitialAmount] = useState({});
@@ -251,9 +259,15 @@ export default function CartScreen() {
     if (newCounts[currentItemId] < 0) {
       newCounts[currentItemId] = 0;
     }
+    
     setCount(newCounts);
     setQuantity(Object.values(newCounts)[0]);
-    console.log("Quantity --> is");
+
+    const quantityValues = Object.values(newCounts);
+    const totalQuantity = quantityValues.reduce((acc, curr) => acc + curr, 0); //reduce the object
+    console.log("line 287",totalQuantity)
+    setTotalQuantity(totalQuantity); //pass the  totalQuantity to this state variable
+
     const newInitialAmount = { ...initialAmount };
     const newAmount = (newInitialAmount[currentItemId] || 0) - waterPrice;
     const roundedAmount = parseFloat(newAmount.toFixed(2));
@@ -1102,6 +1116,7 @@ export default function CartScreen() {
                 console.log("Vehicle1Fee is not available or has no value");
                 // Handle the case when vehicle1Fee is not present or has no value
               }
+
             } else if (
               totalQuantity >= Number(vehicle3MinQty) &&
               totalQuantity <= Number(vehicle3MaxQty)
@@ -2097,9 +2112,9 @@ export default function CartScreen() {
           setGgcashProofImage(url);
           blob.close();
           setgcashProoflink_Storage(url);
-          //  console.log("before the createOrder", gcashProoflink_Storage);
-
-          createOrder(customerData.cusId, url);
+          
+          // console.log("line 2101",customerID);
+          createOrder(customerID, url);
           setShowModal_ModeOfPayment(false);
           ToastAndroid.show(
             "Order successfully. Thank you for ordering" +
@@ -2108,33 +2123,6 @@ export default function CartScreen() {
               ".",
             ToastAndroid.LONG
           );
-
-          // Alert.alert(
-          //   "Order confirmed",
-          //   `Order successfully. Thank you for ordering ${passedStationName}.`,
-          //   [
-          //     {
-          //       text: "Okay",
-          //       onPress: () => {
-          //        // setgcashProoflink_Storage(url);
-          //        console.log("before the createOrder",gcashProoflink_Storage)
-          //         createOrder(customerData.cusId,gcashProoflink_Storage);
-          //         // ToastAndroid.show(
-          //         //   "Order successfully. Thank you for ordering" +
-          //         //     " " +
-          //         //     passedStationName +
-          //         //     ".",
-          //         //   ToastAndroid.LONG
-          //         // );
-          //         setShowModal_ModeOfPayment(false);
-          //       },
-          //     },
-          //     // ,{
-          //     //   text:"Cancel",
-          //     // }
-          //   ]
-          // );
-
           return url;
         });
       }
@@ -2293,21 +2281,26 @@ export default function CartScreen() {
                 setShowModal_ModeOfPayment(true);
               }
             } else if (selectedpaymenthod === "Points") {
-              if (
-                rewardScreenNewModeOfPayment === "Gcash" &&
-                gcashProofImage === null
-              ) {
-                setShowModal_ModeOfPayment(true);
-              } else {
-                createOrder(customerData.cusId, gcashProoflink_Storage); //call this if all data is fill up
-                ToastAndroid.show(
-                  "Order successfully. Thank you for ordering" +
-                    " " +
-                    passedStationName +
-                    ".",
-                  ToastAndroid.LONG
-                );
-              }
+             
+              Alert.alert(
+                "Warning",
+                "Since you already placed your order, you cannot cancel anymore. Do you want to proceed?",
+                [
+                  {
+                    text: "Proceed",
+                    onPress: () => {
+                     
+                      setShowRewardsPointsModal(true);
+                    },
+                  },
+                  {
+                    text: "Cancel",
+                    onPress: () => {
+                      console.log("Cancel press");
+                    },
+                  },
+                ]
+              );
             }
           }
         } else {
@@ -2328,30 +2321,36 @@ export default function CartScreen() {
           } else {
             if (selectedpaymenthod === "Gcash") {
               if (gcashProofImage === null) {
-                setShowModal_ModeOfPayment(true);
+                //setShowModal_ModeOfPayment(true);
+                Alert.alert(
+                  "Warning",
+                  "Since you already placed your order, you cannot cancel anymore. Do you want to proceed?",
+                  [
+                    {
+                      text: "Proceed",
+                      onPress: () => {
+                       
+                        setShowModal_ModeOfPayment(true);
+                      },
+                    },
+                    {
+                      text: "Cancel",
+                      onPress: () => {
+                        console.log("Cancel press");
+                      },
+                    },
+                  ]
+                );
               }
             } else if (selectedpaymenthod === "Points") {
               Alert.alert(
                 "Warning",
-                "Since you already placed your order, you cannot cancel anymore.",
+                "Since you already placed your order, you cannot cancel anymore. Do you want to proceed?",
                 [
                   {
                     text: "Proceed",
                     onPress: () => {
-                      // console.log("proceed press");
-                      // navigation.navigate("RewardScreen", {
-                      //   // navigation.navigate("RewardScreen", {
-                      //   passedStationName,
-                      //   selectedOrdertype,
-                      //   secondItem,
-                      //   extractedDatas,
-                      //   FinalTotalAmount: parseFloat(FinalTotalAmount),
-                      //   customerData,
-                      //   selectedItem,
-                      //   paymentMethods,
-                      //   gcashNumber,
-                      //   createOrder: createOrderFunction,
-                      // });
+                  
                       setShowRewardsPointsModal(true);
                     },
                   },
@@ -2364,7 +2363,7 @@ export default function CartScreen() {
                 ]
               );
             } else {
-              createOrder(customerData.cusId, gcashProoflink_Storage);
+              createOrder(customerID, gcashProoflink_Storage);
               ToastAndroid.show(
                 "Order successfully. Thank you for ordering " +
                   passedStationName +
@@ -2377,9 +2376,9 @@ export default function CartScreen() {
       }
     }
   };
-  const [createOrderFunction, setcreateOrderFunction] = useState();
+
   //console.log("babaw sa createOrder", gcashProoflink_Storage);
-  const createOrder = (CUSTOMERID, gcashProoflink_Storage) => {
+  const createOrder =async (CUSTOMERID, gcashProoflink_Storage) => {
     const RandomId = Math.floor(Math.random() * 50000) + 10000;
     //console.log("inside  sa createOrder", gcashProoflink_Storage);
     const newOrderKey = RandomId;
@@ -2402,7 +2401,7 @@ export default function CartScreen() {
       order_SubTotal: parseFloat(totalAmount) ?? null,
       order_TotalAmount: parseFloat(FinalTotalAmount) ?? null,
       orderPaymentMethod: selectedpaymenthod ? selectedpaymenthod : null,
-      orderPaymentMethod2: rewardScreenNewModeOfPayment ?? null,
+      orderPaymentMethod2: selectedNewpaymenthod ?? null,
 
       order_DeliveryTypeValue: deliveryTypeValue,
       order_OrderTypeValue: orderTypeValue,
@@ -2447,7 +2446,7 @@ export default function CartScreen() {
         reservationDate_ReserveDeliveryTypes || null,
       order_deliveryReservationDeliveryReserveTime: reservationTime || null,
     };
-    setcreateOrderFunction(orderData);
+   
     //flatten codes
     // passedData_SelectedItem.forEach((item, index) => {
     //   const productNamekey = `productName${index + 1}`;
@@ -2491,6 +2490,7 @@ export default function CartScreen() {
         setText("Reservation Date");
         setFinalTotalAmount();
         setdeliveyfeeValue(0);
+        setvehicleFeeSaveToDb(0);
         setgcashProoflink_Storage(null);
         setTimeout(() => {
           navigation.navigate("Order");
@@ -2503,15 +2503,6 @@ export default function CartScreen() {
 
     // update the customer points based on the admin choices
     console.log("pass rewards data inside the create order", rewardsData);
-    // console.log(
-    //   "pass rewards data inside the create order",
-    //   typeof rewardsData
-    // );
-    // console.log(
-    //   "rewardsData[0].rewardWaysToEarn:",
-    //   Object.values(rewardsData)[0].rewardWaysToEarn
-    // );
-
     let pointsTobeAddedd = 0;
     //per amount new codes
     if (rewardsData && rewardsData.length > 0) {
@@ -2525,13 +2516,13 @@ export default function CartScreen() {
           customerData &&
           typeof customerData === "object" &&
           Object.keys(customerData).find(
-            (key) => customerData[key].cusId === CUSTOMERID
+            (key) => customerData[key].cusId === customerID
           );
         //console.log("what is customer:", customer);
         //console.log("what is customer 1119", typeof CUSTOMERID, CUSTOMERID);
         if (
           typeof customerData === "object" &&
-          customerData.cusId === CUSTOMERID
+          customerData.cusId === customerID
         ) {
           if (
             parseFloat(FinalTotalAmount) >=
@@ -2540,24 +2531,20 @@ export default function CartScreen() {
               parseFloat(rewardsData[0].reward_maxRange_perAmount)
           ) {
             pointsTobeAddedd = rewardsData[0].rewardPointsToEarn;
-            const customerPointsRef = ref(db, `CUSTOMER/${CUSTOMERID}`); //get the db reference
-            get(customerPointsRef).then((snapshot) => {
+            const customerPointsRef = ref(db, `CUSTOMER/${customerID}`); //get the db reference
+
+            try {
+              const snapshot = await get(customerPointsRef);
               const walletPoints = snapshot.val().walletPoints || 0;
               const updatedPoints =
-                parseFloat(walletPoints) +
-                parseFloat(rewardsData[0].rewardPointsToEarn); //update the walletPoints;
-
-              //console.log("line 1535", rewardsData[0].rewardPointsToEarn);
-              update(customerPointsRef, { walletPoints: updatedPoints })
-                .then(() => {
-                  console.log(
-                    "Range between set of admin-->Per Amount--->Customer points updated successfully!"
-                  );
-                })
-                .catch((error) => {
-                  console.error("Error updating customer points: ", error);
-                });
-            });
+                parseFloat(walletPoints) + parseFloat(rewardsData[0].rewardPointsToEarn);
+      
+              await update(customerPointsRef, { walletPoints: updatedPoints });
+      
+              console.log("Line 2543 Range between set of admin-->Per Amount--->Customer points updated successfully!");
+            } catch (error) {
+              console.error("Error updating customer points: ", error);
+            }
           } else if (
             parseFloat(FinalTotalAmount) >
             parseFloat(rewardsData[0].reward_maxRange_perAmount)
@@ -2566,100 +2553,104 @@ export default function CartScreen() {
             console.log(
               "Customer spent more than 300, so earn 1 point per amount spent plus an additional 1 point"
             );
-            // pointsTobeAddedd =
-            //   rewardsData && rewardsData[0] && rewardsData[0].rewardPointsToEarn
-            //     ? rewardsData[0].rewardPointsToEarn + 1
-            //     : null;
+          
             pointsTobeAddedd =
               parseFloat(rewardsData[0].rewardPointsToEarn) + 1;
             console.log(
               "Customer spent more than 300, so earn 1 point per amount spent plus an additional 1 point",
               parseFloat(rewardsData[0].rewardPointsToEarn) + 1
             );
-            const customerPointsRef = ref(db, `CUSTOMER/${CUSTOMERID}`); //get the db reference
-            get(customerPointsRef).then((snapshot) => {
+            const customerPointsRef = ref(db, `CUSTOMER/${customerID}`); //get the db reference
+            try {
+              const snapshot = await get(customerPointsRef);
               const walletPoints = snapshot.val().walletPoints || 0;
               const updatedPoints =
                 parseFloat(walletPoints) +
                 parseFloat(rewardsData[0].rewardPointsToEarn) +
                 1;
-              //update the walletPoints;
-              console.log("updated", updatedPoints);
-              update(customerPointsRef, { walletPoints: updatedPoints })
-                .then(() => {
-                  console.log(
-                    "More than set of maximum-->Per Amount--->Customer points updated successfully!"
-                  );
-                })
-                .catch((error) => {
-                  console.error("Error updating customer points: ", error);
-                });
-            });
+      
+              await update(customerPointsRef, { walletPoints: updatedPoints });
+      
+              console.log("Line 2573,More than set of maximum-->Per Amount--->Customer points updated successfully!");
+            } catch (error) {
+              console.error("Error updating customer points: ", error);
+            }
           } else if (
             parseFloat(FinalTotalAmount) >=
             parseFloat(rewardsData[0].reward_minRange_perAmount)
           ) {
             pointsTobeAddedd = rewardsData && rewardsData[0].rewardPointsToEarn;
             const customerPointsRef = ref(db, `CUSTOMER/${CUSTOMERID}`); //get the db reference
-            get(customerPointsRef).then((snapshot) => {
-              const walletPoints = snapshot.val().walletPoints || 0;
-              const updatedPoints =
-                parseFloat(walletPoints) +
-                parseFloat(rewardsData && rewardsData[0].rewardPointsToEarn); //update the walletPoints;
-
-              update(customerPointsRef, { walletPoints: updatedPoints })
-                .then(() => {
-                  console.log(
-                    "Range between set of admin-->Per Amount--->Customer points updated successfully!"
-                  );
-                })
-                .catch((error) => {
-                  console.error("Error updating customer points: ", error);
-                });
-            });
+           try{
+            const snapshot = await get(customerPointsRef);  
+            const walletPoints = snapshot.val().walletPoints || 0;
+            const updatedPoints =
+            parseFloat(walletPoints) +
+            parseFloat(rewardsData && rewardsData[0].rewardPointsToEarn); //update the walletPoints;
+            await update(customerPointsRef, { walletPoints: updatedPoints });
+            console.log("Line 2590 More than set of maximum-->Per Amount--->Customer points updated successfully!");
+           }catch (error) {
+            console.error("Error updating customer points: ", error);
+          }
           } else {
             console.log("Total amount is less than all");
           }
         }
       } else {
+       // let updatedPoints=0;
         //per transaction
+        console.log("line 2650",CUSTOMERID);
         const customer =
           customerData &&
           typeof customerData === "object" &&
           Object.keys(customerData).find(
             (key) => customerData[key].cusId === CUSTOMERID
           );
-        // console.log("what is customer:", customer);
-        //console.log("what is customer 1119", typeof CUSTOMERID, CUSTOMERID);
+        console.log("what is customer:", customer);
+        console.log("what is customer 1119", typeof CUSTOMERID, CUSTOMERID);
         if (
           typeof customerData === "object" &&
-          customerData.cusId === CUSTOMERID
+          customerData.cusId === customerID
         ) {
           pointsTobeAddedd =
             rewardsData && parseFloat(rewardsData[0].rewardPointsToEarn);
-          const customerPointsRef = ref(db, `CUSTOMER/${CUSTOMERID}`); //get the db reference
+          const customerPointsRef = ref(db, `CUSTOMER/${customerID}`); //get the db reference
           // Use the `get` method to retrieve the current walletPoints value
-          get(customerPointsRef).then((snapshot) => {
+          // get(customerPointsRef).then((snapshot) => {
+          //   const walletPoints = snapshot.val().walletPoints || 0;
+          //   console.log("walletPoints",walletPoints);
+          // const updatedPoints =
+          //     parseFloat(walletPoints) +parseFloat(rewardsData[0].rewardPointsToEarn) ; //update the walletPoints
+          //   console.log("line 1737", updatedPoints);
+          //   console.log("line 2642", updatedPoints);
+          // update(customerPointsRef, { walletPoints: updatedPoints })
+          // .then(() => {
+          //   console.log(
+          //     "Per transaction--->Customer points updated successfully!"
+          //   );
+          // })
+          // .catch((error) => {
+          //   console.error("Error updating customer points: ", error);
+          // });
+          // });
+          try {
+            const snapshot = await get(customerPointsRef);
             const walletPoints = snapshot.val().walletPoints || 0;
-            const updatedPoints =
-              parseFloat(walletPoints) +
-              parseFloat(rewardsData[0].rewardPointsToEarn); //update the walletPoints
-            //pointsToAdd= parseFloat(rewardsData[0].rewardPointsToEarn);
-            // console.log("line 1734",pointsToAdd);
-            // pointsTobeAddedd=pointsToAdd;
-            // console.log("line 1736",pointsTobeAddedd);
+            console.log("walletPoints", walletPoints);
+        
+            const updatedPoints = parseFloat(walletPoints) + parseFloat(pointsTobeAddedd);
             console.log("line 1737", updatedPoints);
-            update(customerPointsRef, { walletPoints: updatedPoints })
-              .then(() => {
-                console.log(
-                  "Per transaction--->Customer points updated successfully!"
-                );
-              })
-              .catch((error) => {
-                console.error("Error updating customer points: ", error);
-              });
-          });
+            console.log("line 2642", updatedPoints);
+        
+            await update(customerPointsRef, { walletPoints: updatedPoints });
+        
+            console.log("Per transaction--->Customer points updated successfully!");
+          } catch (error) {
+            console.error("Error updating customer points: ", error);
+          }
+         
         }
+       
       }
     } else {
       console.log("No data available for reward data");
@@ -2686,7 +2677,7 @@ export default function CartScreen() {
         });
     });
     //save to user log collection
-    const action = "Order";
+    const action = "Placed Order";
     //console.log("Points added 1754 above the customersLog", pointsTobeAddedd);
     const pointsUpdate = "pointsAdded";
     const userLogRandomId = Math.floor(Math.random() * 50000) + 10000;
@@ -2694,11 +2685,12 @@ export default function CartScreen() {
     set(ref(db, `CUSTOMERSLOG/${newUserlogKey}`), {
       orderID: newOrderKey,
       cusId: CUSTOMERID,
-      orderDate: currentDate,
+      date: currentDate,
       action: action,
       pointsUpdate: pointsUpdate,
       pointsAddedValue: pointsTobeAddedd,
       adminId: passedAdminID,
+      logId:newUserlogKey
     })
       .then(async () => {
         // console.log('Test if Save to db-----'+reservationDate );
@@ -2753,8 +2745,7 @@ export default function CartScreen() {
   const [showRewardsPointsModal, setShowRewardsPointsModal] = useState(false);
   const [useAllIsDisable, setUseAllIsDisable] = useState(false);
   const [manualTextinputValue, setmanualTextinputValue] = useState("");
-  const [passedTotalAmount_RewardModal, setpassedTotalAmount_RewardModal] =
-    useState(FinalTotalAmount || 0);
+
   //code for manual deduct of points
   const manualPointsDeduct = () => {
     //if ang ge enter na value is greater than sa customer pts
@@ -2765,32 +2756,36 @@ export default function CartScreen() {
       console.log("Input value for manual is ", manualTextinputValue);
       console.log("Final total is", FinalTotalAmount);
       const deductedAmount =
-        parseFloat(FinalTotalAmount) -
-        parseFloat(manualTextinputValue);
+        parseFloat(FinalTotalAmount) - parseFloat(manualTextinputValue);
       //const deductedAmount =
       //parseFloat(FinalTotalAmount) + parseFloat(manualTextinputValue);
 
       console.log("manual. remaining balance is ", deductedAmount);
       ToastAndroid.show("Points successfully used.", ToastAndroid.LONG);
-      setFinalTotalAmount(deductedAmount);
-
-      Alert.alert(
-        "Warning",
-        `You have balance of ₱${deductedAmount.toFixed(
-          2
-        )}.  Please choose an alternative mode of payment below.`,
-        [
-          {
-            text: "Okay",
-            onPress: () => {
-              setUseAllIsDisable(false);
-              setmanualTextinputValue("");
-              setShowviewmodeofpayment(true);
-              setActionHasBeenTaken(true);
+      setFinalTotalAmount(deductedAmount.toFixed(2));
+      if (deductedAmount === 0 || deductedAmount === 0.0) {
+        setShowviewmodeofpayment(false);
+      } else {
+        Alert.alert(
+          "Warning",
+          `You have balance of ₱${deductedAmount.toFixed(
+            2
+          )}.  Please choose an alternative mode of payment below.`,
+          [
+            {
+              text: "Okay",
+              onPress: () => {
+                setUseAllIsDisable(false);
+                setmanualTextinputValue("");
+                setShowviewmodeofpayment(true);
+                setActionHasBeenTaken(true);
+                setbtnFlagForRewardModal(true);
+              },
             },
-          },
-        ]
-      );
+          ]
+        );
+      }
+
       //update the database
       const customerPointsRef = ref(db, `CUSTOMER/${customerID}`); //get the db reference
       // Use the `get` method to retrieve the current walletPoints value
@@ -2800,6 +2795,7 @@ export default function CartScreen() {
         //setorderPoints(updatedPoints);
         update(customerPointsRef, { walletPoints: updatedPoints })
           .then(() => {
+
             console.log(
               "Manual Points Deduct--->Customer points updated successfully!"
             );
@@ -2816,10 +2812,11 @@ export default function CartScreen() {
       set(ref(db, `CUSTOMERSLOG/${newUserlogKey}`), {
         //orderID: newOrderKey,
         cusId: customerID,
-        datepointsDeducted: currentDate,
+        date: currentDate,
         action: actionTaken,
         pointsDeductted: manualTextinputValue,
         btnClick: btnClick,
+        logId:newUserlogKey
       })
         .then(async () => {
           // console.log('Test if Save to db-----'+reservationDate );
@@ -2868,15 +2865,17 @@ export default function CartScreen() {
       set(ref(db, `CUSTOMERSLOG/${newUserlogKey}`), {
         //orderID: newOrderKey,
         cusId: customerID,
-        datepointsDeducted: currentDate,
+        date: currentDate,
         action: actionTaken,
         pointsDeductted: FinalTotalAmount,
         btnClick: btnClick,
+        logId:newUserlogKey
       })
         .then(async () => {
           // console.log('Test if Save to db-----'+reservationDate );
           ToastAndroid.show("Points successfully used.", ToastAndroid.LONG);
           setActionHasBeenTaken(false);
+          setbtnFlagForRewardModal(false);
           setFinalTotalAmount(0);
           console.log(
             "Reward screen --->New UserLog with the UserLog ID of-------------------------->",
@@ -2889,30 +2888,35 @@ export default function CartScreen() {
         });
     } else {
       //if passed total amount is greater than customer points
-      setAutoUsePoints(true);
+      //setAutoUsePoints(true);
       const deductedAmount =
-        parseFloat(passedTotalAmount_RewardModal) - customerRewardsPoints;
+        parseFloat(FinalTotalAmount) - customerRewardsPoints;
       console.log("Deducted Amount is ", deductedAmount);
       //const roundedPoints = (0).toFixed(2); // round to 2 decimal places
       //setcustomerRewardsPoints(roundedPoints);
       ToastAndroid.show("Points successfully used.", ToastAndroid.LONG);
       setFinalTotalAmount(deductedAmount.toFixed(2));
-
-      Alert.alert(
-        "Warning",
-        `You have balance of ₱${deductedAmount.toFixed(
-          2
-        )}.  Please choose an alternative mode of payment below.`,
-        [
-          {
-            text: "Okay",
-            onPress: () => {
-              setShowviewmodeofpayment(true);
-              setActionHasBeenTaken(true);
+      if (deductedAmount === 0 || deductedAmount === 0.0) {
+        setShowviewmodeofpayment(false);
+      } else {
+        Alert.alert(
+          "Warning",
+          `You have balance of ₱${deductedAmount.toFixed(
+            2
+          )}.  Please choose an alternative mode of payment below.`,
+          [
+            {
+              text: "Okay",
+              onPress: () => {
+                setShowviewmodeofpayment(true);
+                setActionHasBeenTaken(true);
+                setbtnFlagForRewardModal(true);
+              },
             },
-          },
-        ]
-      );
+          ]
+        );
+      }
+
       //update the database
       const customerPointsRef = ref(db, `CUSTOMER/${customerID}`); //get the db reference
       // Use the `get` method to retrieve the current walletPoints value
@@ -2937,7 +2941,7 @@ export default function CartScreen() {
       set(ref(db, `CUSTOMERSLOG/${newUserlogKey}`), {
         //orderID: newOrderKey,
         cusId: customerID,
-        orderDate: currentDate,
+        date: currentDate,
         action: actionTaken,
         pointsDeductted: customerRewardsPoints,
         btnClick: btnClick,
@@ -2955,6 +2959,7 @@ export default function CartScreen() {
         });
     }
   };
+
   const [selectedNewpaymenthod, setselectedNewPaymentMethod] = useState();
   const [receiverModeOfPayment, setreceiverModeOfPayment] = useState();
   const [showviewmodeofpayment, setShowviewmodeofpayment] = useState(false);
@@ -2970,22 +2975,221 @@ export default function CartScreen() {
 
   const [actionHasBeenTaken, setActionHasBeenTaken] = useState(false); //flag to track if user click something in this codes
 
-const [checkedItemKey_newpaymentMethod, setCheckedItemKey_newpaymentMethod] =
+  const [checkedItemKey_newpaymentMethod, setCheckedItemKey_newpaymentMethod] =
     useState(null);
-    const handleItemchecked_newpaymentMethod = (item) => {
-      setCheckedItemKey_paymentMethod(
-        item.key === checkedItemKey_paymentMethod ? null : item.key
-      );
-      if (item.value === "CashOnDelivery") {
-        // console.log("COD");
-        // if (selectedOrdertype === "PickUp") {
-        //   Alert.alert("To our beloved customer", "COD is only for delivery.");
-        // }
+  const handleItemchecked_newpaymentMethod = (item) => {
+    setCheckedItemKey_paymentMethod(
+      item.key === checkedItemKey_paymentMethod ? null : item.key
+    );
+    if (item.value === "CashOnDelivery") {
+      // console.log("COD");
+      // if (selectedOrdertype === "PickUp") {
+      //   Alert.alert("To our beloved customer", "COD is only for delivery.");
+      // }
+    } else {
+      // console.log("GCASH");
+      // setShowModal_ModeOfPayment(true);
+    }
+  };
+
+  //get the promo offered in that store
+  useLayoutEffect(() => {
+    const promoOfferedRef = ref(db, "DISCOUNTCOUPON/");
+    const promoOfferedQuery = query(
+      promoOfferedRef,
+      orderByChild("adminId"),
+      equalTo(passedAdminID)
+    );
+    onValue(promoOfferedQuery, (snapshot) => {
+      const data = snapshot.val();
+      if (data && Object.keys(data).length > 0) {
+        const promoOfferedInfo = Object.keys(data).map((key) => ({
+          id: key,
+          ...data[key],
+        }));
+
+        // check and set expired coupons
+        const currentDate = moment();
+        const promoOfferedWithExpiration = promoOfferedInfo.map((promo) => {
+          const expirationDate = moment(
+            promo.couponExpirationTo,
+            "yyyy-MM-DDTHH:mm:ssZ"
+          );
+          const isExpired = expirationDate < currentDate;
+          const disabled =
+            isExpired || expirationDate.isSame(currentDate, "day");
+          return {
+            ...promo,
+            isExpired,
+            disabled,
+            couponExpirationTo: expirationDate.format("MM-DD-yyyy"),
+          };
+        });
+        // console.log("line 163", promoOfferedWithExpiration);
+        setpromoOffered(promoOfferedWithExpiration);
+        const couponAdminID =
+          promoOfferedWithExpiration && promoOfferedWithExpiration[0]?.adminId;
+        setcouponAdminID(couponAdminID);
       } else {
-        // console.log("GCASH");
-        // setShowModal_ModeOfPayment(true);
+        setpromoOffered([]);
       }
-    };
+    });
+  }, [passedAdminID]);
+  const [promoOffered, setpromoOffered] = useState();
+  const [couponAdminID, setcouponAdminID] = useState();
+  const [CustomerLogsCounts, setCustomerLogsCounts] = useState();
+  //function code for coupon use
+  const couponUseFunction = (item) => {
+    const couponID = item.couponId; //ID of the coupon
+    const couponValueDiscount = item.couponDiscountValue;
+    const couponUsed = "alreadyUsed"; //track if the coupon is used or not
+    const customerPointsRef = ref(db, `CUSTOMER/${customerID}`); //get the db reference
+    // const discountCouponValue = promoOffered[0].couponDiscountValue;
+
+    const pointsToRequired = item.couponPointsRequiredToClaim;
+
+    const customerLogRef = ref(db, "CUSTOMERSLOG/");
+    //  console.log("inside this effect",customerID)
+    const customerQuery = query(
+      customerLogRef,
+      orderByChild("couponId"),
+      equalTo(couponID)
+    );
+
+    get(customerQuery).then((snapshot) => {
+      const logs = snapshot.val() || {};
+      const logsCount = Object.keys(logs).length;
+      setCustomerLogsCounts(logs);
+      // If no logs found, proceed to use the coupon
+      console.log("Logs test", logs);
+
+      if (
+        logsCount > 0 &&
+        Object.values(logs)[0].useCoupon === couponUsed &&
+        Object.values(logs)[0].couponId === couponID
+      ) {
+        setcouponUsedDisable(true);
+        console.log("You have already used this coupon");
+        Alert.alert("Warning", "You have already used this coupon.");
+      } else {
+        const remainingCustomerPoints =
+          parseFloat(customerRewardsPoints) - parseFloat(pointsToRequired);
+        console.log("Remain points", remainingCustomerPoints);
+        // const deductionAmount =
+        //   (FinalTotalAmount * couponValueDiscount) / 100; // subtracted amount
+        const deductionAmount = FinalTotalAmount * (couponValueDiscount / 100); // subtracted amount
+        const newTotalAmount = FinalTotalAmount - deductionAmount; // new total amount
+        console.log("Deducted amount:", deductionAmount);
+        console.log("New total amount:", newTotalAmount);
+
+        ToastAndroid.show(
+          "You successfully used this coupon.",
+          ToastAndroid.LONG
+        );
+        setFinalTotalAmount(newTotalAmount.toFixed(2));
+        if (newTotalAmount === 0 || newTotalAmount === 0.0) {
+          setShowviewmodeofpayment(false);
+        } else {
+          Alert.alert(
+            "Warning",
+            `You have balance of ₱${newTotalAmount.toFixed(
+              2
+            )}.  Please choose an alternative mode of payment on the cart screen.`,
+            [
+              {
+                text: "Okay",
+                onPress: () => {
+                  setcouponUsedDisable(true);
+                  setShowviewmodeofpayment(true);
+                  setActionHasBeenTaken(true);
+                  setbtnFlagForRewardModal(true);
+                },
+              },
+            ]
+          );
+        }
+
+        //u
+        get(customerPointsRef).then((snapshot) => {
+          const walletPoints = snapshot.val().walletPoints || 0;
+          const updatedPoints = parseFloat(remainingCustomerPoints); // convert deductedAmount to an integer
+          //setorderPoints(updatedPoints);
+          update(customerPointsRef, { walletPoints: updatedPoints })
+            .then(() => {
+              console.log("--->Customer points updated successfully!");
+            })
+            .catch((error) => {
+              console.error("Error updating customer points: ", error);
+            });
+        });
+        //save to customer user logs
+        const couponItem = "useCoupon";
+        const actionTaken = "pointsDeducted";
+        const userLogRandomId = Math.floor(Math.random() * 50000) + 10000;
+        const newUserlogKey = userLogRandomId;
+        set(ref(db, `CUSTOMERSLOG/${newUserlogKey}`), {
+          //orderID: newOrderKey,
+          cusId: customerID,
+          couponusedDate: currentDate,
+          action: actionTaken,
+          pointsDeducted: pointsToRequired,
+          couponItemClick: couponItem,
+          couponId: couponID,
+          useCoupon: couponUsed,
+          logId:newUserlogKey
+        })
+          .then(async () => {
+            // console.log('Test if Save to db-----'+reservationDate );
+            console.log(
+              "Reward screen --->New UserLog with the User ID of--->",
+              newUserlogKey
+            );
+          })
+          .catch((error) => {
+            console.log("Error Saving to Database", error);
+            alert("Error", JSON.stringify(error), "OK");
+          });
+      }
+    });
+  };
+  const [couponUsedDisable, setcouponUsedDisable] = useState(false);
+
+  //handle function for confirm button
+  const [btnFlagForRewardModal, setbtnFlagForRewardModal] = useState(false);
+  //function for confirm button
+  const handleFunction_ConfirmBtn = () => {
+    const totalAmount = parseFloat(FinalTotalAmount); // Convert to number
+    console.log("FinalTotalAmount:", totalAmount);
+    console.log("typeof FinalTotalAmount:", typeof totalAmount);
+    if (!btnFlagForRewardModal) {
+      createOrder(customerID, gcashProoflink_Storage);
+    }
+    if (btnFlagForRewardModal) {
+      if (checkedItemKey_newpaymentMethod === null) {
+        console.log("line 3219");
+        Alert.alert("Warning", `Please choose new mode of payment`);
+      } else if (selectedNewpaymenthod === "Gcash" && gcashProofImage == null) {
+        console.log("line 3235");
+        setShowRewardsPointsModal(false);
+        setTimeout(() => {
+          setShowModal_ModeOfPayment(true);
+        }, 1500);
+      } else {
+        // Proceed with the order
+        
+     
+        createOrder(customerID, gcashProoflink_Storage);
+        ToastAndroid.show(
+          "Order successfully. Thank you for ordering" +
+            " " +
+            passedStationName +
+            ".",
+          ToastAndroid.LONG
+        );
+      }
+    }
+  };
+
   {
     /*RETURN JSX */
   }
@@ -3020,7 +3224,7 @@ const [checkedItemKey_newpaymentMethod, setCheckedItemKey_newpaymentMethod] =
                 Proof of payment
               </Text>
               <View style={{ flex: 1, marginTop: 2 }} />
-              <TouchableOpacity
+              {/* <TouchableOpacity
                 onPress={() => {
                   setShowModal_ModeOfPayment(false);
                   setGgcashProofImage(null);
@@ -3032,7 +3236,7 @@ const [checkedItemKey_newpaymentMethod, setCheckedItemKey_newpaymentMethod] =
                   color="black"
                   style={{ marginTop: 5 }}
                 />
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
             <View style={{ padding: 5, marginLeft: 3 }}>
               <Text style={{ fontFamily: "nunito-light" }}>
@@ -3407,7 +3611,7 @@ const [checkedItemKey_newpaymentMethod, setCheckedItemKey_newpaymentMethod] =
           }}
         >
           <View style={styles.rewardsModal}>
-            <View style={styles.rewardsModalTitle}>
+            {/* <View style={styles.rewardsModalTitle}>
               
               <Text
                 style={{
@@ -3420,27 +3624,15 @@ const [checkedItemKey_newpaymentMethod, setCheckedItemKey_newpaymentMethod] =
                 Reward Points
               </Text>
               <View style={{ flex: 1, marginTop: 2 }} />
-              {/* <TouchableOpacity
-                onPress={() => {
-                  setShowModal_ModeOfPayment(false);
-                  setGgcashProofImage(null);
-                }}
-              >
-                <AntDesign
-                  name="close"
-                  size={20}
-                  color="black"
-                  style={{ marginTop: 5 }}
-                />
-              </TouchableOpacity> */}
-            </View>
+            
+            </View> */}
             <View style={StylesRewardsPoints.wrapperWaterProduct}>
-              <Text style={StylesRewardsPoints.waterProdStyle}>
+              <Text style={StylesRewardsPoints.currentrewardsPointsStyle}>
                 Current rewards points
               </Text>
 
               <View style={StylesRewardsPoints.pointsItem}>
-                 <View style={StylesRewardsPoints.circular}>
+                <View style={StylesRewardsPoints.circular}>
                   <TouchableOpacity
                     onPress={() => {
                       console.log("use all is press");
@@ -3593,8 +3785,7 @@ const [checkedItemKey_newpaymentMethod, setCheckedItemKey_newpaymentMethod] =
                         keyboardType="numeric"
                         value={manualTextinputValue}
                         editable={
-                          customerRewardsPoints != 0 ||
-                          passedTotalAmount_RewardModal != 0.0
+                          customerRewardsPoints != 0 || FinalTotalAmount != 0.0
                         }
                         // editable={
                         //   customerRewardsPoints != 0
@@ -3605,115 +3796,273 @@ const [checkedItemKey_newpaymentMethod, setCheckedItemKey_newpaymentMethod] =
                   </View>
                 </View>
 
-               <View style={StylesRewardsPoints.viewPoints}>
+                <View style={StylesRewardsPoints.viewPoints}>
                   <Text style={{ fontSize: 33, textAlign: "center", top: 10 }}>
                     {customerRewardsPoints || 0}
                   </Text>
                 </View>
-             
-             
               </View>
               <View
-                  style={{
-                    backgroundColor: "transparent",
-                    top: 20,
-                    padding: 8,
-                    flexDirection: "row-reverse",
-                  }}
-                >
-                  <Text style={{ fontSize: 18, fontFamily: "nunito-semibold" }}>
-                    Total Amount - ₱
-                    {parseFloat(FinalTotalAmount).toFixed(2) || 0}
-
-                  </Text>
-                </View>
-                  {/* code for new mode of payment */}
-          {showviewmodeofpayment && (
-            <View style={StylesRewardsPoints.viewForModeofPayment}>
-              <Text
                 style={{
-                  fontSize: 17,
-                  fontFamily: "nunito-semibold",
-                  marginLeft: 5,
+                  backgroundColor: "transparent",
+                  top: 5,
+                  padding: 8,
+                  flexDirection: "row-reverse",
                 }}
               >
-                Mode of payment
-              </Text>
-              {receiverModeOfPayment &&
-                receiverModeOfPayment.map((item) => {
-                  const isChecked = item.key === checkedItemKey_newpaymentMethod;
-                  const isCODDisabled =
-                    selectedOrdertype === "PickUp" &&
-                    item.label === "CashOnDelivery";
-                  return (
-                    <View
-                      key={item.key}
-                      style={{
-                        // backgroundColor: "red",
-                        marginTop: 35,
-                        height: 25,
-                        borderRadius: 5,
-                        padding: 0,
-                        flexDirection: "row",
-                        width: 110,
-
-                        justifyContent: "center",
-                        marginLeft: -95,
-                        marginRight: 110,
-                        // elevation: 2,
-                        alignItems: "center",
-                      }}
-                    >
-                      <TouchableOpacity
-                        onPress={() => {
-                          handleItemchecked_newpaymentMethod(item);
-                          setselectedNewPaymentMethod(item.value);
-                          setCheckedItemKey_newpaymentMethod(item.key);
-                          console.log("payment clicked Value -->", item.value);
-                        }}
-                        disabled={isCODDisabled}
-                      >
+                <Text style={{ fontSize: 18, fontFamily: "nunito-semibold" }}>
+                  Total Amount - ₱{parseFloat(FinalTotalAmount).toFixed(2) || 0}
+                </Text>
+              </View>
+              {/* code for new mode of payment */}
+              {showviewmodeofpayment && (
+                <View style={StylesRewardsPoints.viewForModeofPayment}>
+                  <Text
+                    style={{
+                      fontSize: 17,
+                      fontFamily: "nunito-semibold",
+                      marginLeft: 5,
+                    }}
+                  >
+                    Mode of payment
+                  </Text>
+                  {receiverModeOfPayment &&
+                    receiverModeOfPayment.map((item) => {
+                      const isChecked =
+                        item.key === checkedItemKey_newpaymentMethod;
+                      const isCODDisabled =
+                        selectedOrdertype === "PickUp" &&
+                        item.label === "CashOnDelivery";
+                      return (
                         <View
+                          key={item.key}
                           style={{
-                            width: 20,
-                            height: 20,
-                            borderWidth: 1,
-                            borderRadius: 4,
+                            // backgroundColor: "red",
+                            marginTop: 35,
+                            height: 25,
+                            borderRadius: 5,
+                            padding: 0,
+                            flexDirection: "row",
+                            width: 110,
+
                             justifyContent: "center",
+                            marginLeft: -95,
+                            marginRight: 110,
+                            // elevation: 2,
                             alignItems: "center",
-                            marginLeft: 10,
-                            marginRight: 5,
-                            //backgroundColor:'blue'
-                            borderColor: isCODDisabled ? "gray" : "black",
-                            //borderColor:selectedOrdertype==="PickUp"? "gray" : "black",
                           }}
                         >
-                          {isChecked && (
-                            <MaterialIcons
-                              name="done"
-                              size={16}
-                              color="black"
-                              styles={{ alignItems: "center" }}
-                            />
-                          )}
+                          <TouchableOpacity
+                            onPress={() => {
+                              handleItemchecked_newpaymentMethod(item);
+                              setselectedNewPaymentMethod(item.value);
+                              setCheckedItemKey_newpaymentMethod(item.key);
+                              console.log(
+                                "payment clicked Value -->",
+                                item.value
+                              );
+                            }}
+                            disabled={isCODDisabled}
+                          >
+                            <View
+                              style={{
+                                width: 20,
+                                height: 20,
+                                borderWidth: 1,
+                                borderRadius: 4,
+                                justifyContent: "center",
+                                alignItems: "center",
+                                marginLeft: 10,
+                                marginRight: 5,
+                                //backgroundColor:'blue'
+                                borderColor: isCODDisabled ? "gray" : "black",
+                                //borderColor:selectedOrdertype==="PickUp"? "gray" : "black",
+                              }}
+                            >
+                              {isChecked && (
+                                <MaterialIcons
+                                  name="done"
+                                  size={16}
+                                  color="black"
+                                  styles={{ alignItems: "center" }}
+                                />
+                              )}
+                            </View>
+                          </TouchableOpacity>
+                          <Text
+                            style={{
+                              fontFamily: "nunito-light",
+                              fontSize: 17,
+                              flexDirection: "row",
+                              color: isCODDisabled ? "gray" : "black",
+                              // color: "black",
+                            }}
+                          >
+                            {item.label}
+                          </Text>
                         </View>
-                      </TouchableOpacity>
-                      <Text
-                        style={{
-                          fontFamily: "nunito-light",
-                          fontSize: 17,
-                          flexDirection: "row",
-                          color: isCODDisabled ? "gray" : "black",
-                          // color: "black",
-                        }}
+                      );
+                    })}
+                </View>
+              )}
+
+              {/* code for coupon/s */}
+              <View
+                style={{
+                  backgroundColor: "transparent",
+                  top: 45,
+                  height: responsiveHeight(30),
+                }}
+              >
+                <Text style={StylesRewardsPoints.availablePtsStyle}>
+                  Available coupons
+                </Text>
+                {/* codes for displaying the coupon offer that store */}
+                <FlatList
+                  data={promoOffered}
+                  showsHorizontalScrollIndicator={false}
+                  horizontal={true}
+                  contentContainerStyle={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                  }}
+                  nestedScrollEnabled={true}
+                  keyExtractor={(item) => item.id.toString()}
+                  //keyExtractor={(item, index) => item.thirdparty_productId}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      key={item.id}
+                      onPress={() => {
+                        console.log("Press");
+                        couponUseFunction(item);
+                      }}
+                      disabled={
+                        item.disabled ||
+                        FinalTotalAmount == 0 ||
+                        couponUsedDisable ||
+                        item.couponPointsRequiredToClaim > customerRewardsPoints
+                      }
+                    >
+                      <View
+                        style={StylesRewardsPoints.productWrapper}
+                        key={item.id}
                       >
-                        {item.label}
-                      </Text>
-                    </View>
-                  );
-                })}
-            </View>
-          )}
+                        <View
+                          style={[
+                            StylesRewardsPoints.viewWaterItem,
+                            // {
+                            //   backgroundColor: item.disabled
+                            //     ? "whitesmoke"
+                            //     : FinalTotalAmount === 0
+                            //     ? "whitesmoke"
+                            //     : item.promoPointsRequiredToClaim <=
+                            //       customerRewardsPoints
+                            //     ? "#B0DAFF"
+                            //     : "whitesmoke",
+                            // },
+                            {
+                              backgroundColor:
+                                item.disabled ||
+                                item.couponPointsRequiredToClaim >
+                                  customerRewardsPoints ||
+                                item.isExpired ||
+                                customerRewardsPoints <
+                                  item.couponPointsRequiredToClaim
+                                  ? "whitesmoke"
+                                  : "#B0DAFF",
+                            },
+
+                            couponUsedDisable && {
+                              backgroundColor: "whitesmoke",
+                            },
+                          ]}
+                        >
+                          {/* 62CDFF   B0DAFF  BFDCE5*/}
+                          <Text style={StylesRewardsPoints.productNameStyle}>
+                            {item.couponName}
+                          </Text>
+                          <Text
+                            style={{
+                              fontFamily: "nunito-semibold",
+                              fontSize: 15,
+                            }}
+                          >
+                            {item.couponDescription}
+                          </Text>
+
+                          <Text
+                            style={{
+                              fontFamily: "nunito-semibold",
+                              fontSize: 15,
+                              top: "5%",
+                            }}
+                          >
+                            {item.isExpired
+                              ? "This coupon is was expired"
+                              : `Valid until ${item.couponExpirationTo}`}
+                          </Text>
+
+                          <Text
+                            style={{
+                              fontFamily: "nunito-semibold",
+                              fontSize: 15,
+                              top: "5%",
+                            }}
+                          >
+                            Points required {item.couponPointsRequiredToClaim}
+                          </Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                  ListEmptyComponent={() => {
+                    <Text
+                      style={{
+                        fontSize: 24,
+                        fontFamily: "nunito-bold",
+                        color: "black",
+                      }}
+                    >
+                      No coupon available
+                    </Text>;
+                  }}
+                />
+              </View>
+
+              {/* codes for confirm button */}
+              <View style={{ backgroundColor: "transparent", top: 50 }}>
+                <TouchableOpacity onPress={handleFunction_ConfirmBtn}>
+                  <View
+                    style={{
+                      borderRadius: 10,
+                      paddingVertical: 10,
+                      paddingHorizontal: 10,
+                      // backgroundColor: isDisabled ? "gray" : "#87cefa",
+                      backgroundColor: "#87cefa",
+                      //marginTop: 20,
+                      //marginBottom: 20,
+                      width: 200,
+                      left: 70,
+                      height: 40,
+                    }}
+                  >
+                    <Text
+                      style={[
+                        globalStyles.buttonText,
+                        { left: -8, bottom: "5%" },
+                      ]}
+                    >
+                      Confirm
+                    </Text>
+                    <MaterialIcons
+                      name="login"
+                      size={24}
+                      color="black"
+                      style={[globalStyles.loginIcon, { marginLeft: -80 }]}
+                    />
+                  </View>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>

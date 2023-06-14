@@ -457,7 +457,7 @@ export default function ProductComponent() {
       selectedItem,
       storeName,
       extractedDatas,
-
+      
       totalPickUpfee,
       input_PickupRequest: input_PickupRequest ?? null,
       input_SwapWithReservation: input_SwapWithReservation ?? null,

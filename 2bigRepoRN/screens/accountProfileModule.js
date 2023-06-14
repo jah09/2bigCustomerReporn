@@ -102,9 +102,10 @@ export default function AccountProfileModule({ navigation }) {
       const newUserLog = newUserLogId;
 
       set(ref(db, `CUSTOMERSLOG/${newUserLog}`), {
-        dateLogout: formattedDate, // Set the logout date and time
+        date: formattedDate, // Set the logout date and time
         email: customerData.email, // Set the current logged-in employee ID
         action: "logout",
+        logId:newUserLog
       }).then(async () => {
         console.log("New:", newUserLog);
         Alert.alert("", "Do you want to logout?", [

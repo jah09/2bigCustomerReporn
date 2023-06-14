@@ -87,7 +87,7 @@ export const StylesRewardsPoints = StyleSheet.create({
           justifyContent: "space-between",
           marginBottom: 5,
           elevation: 6,
-          top: 10,
+          top:  responsiveHeight(1),
           height: 80,
           //justifyContent:'center'
         },
@@ -124,24 +124,30 @@ export const StylesRewardsPoints = StyleSheet.create({
           // bottom:20
         },
         wrapperWaterProduct: {
-          backgroundColor: "red",
+          backgroundColor: "white",
           height: responsiveHeight(70),
           padding: 10,
           width: "100%",
-          left: responsiveHeight(5),
+          left: responsiveHeight(0),
         },
-        waterProdStyle: {
+        currentrewardsPointsStyle: {
           fontFamily: "nunito-semibold",
           fontSize: 18,
           marginLeft: 0,
-          top: 0,
+          top:  responsiveHeight(0),
+        },
+        availablePtsStyle: {
+          fontFamily: "nunito-semibold",
+          fontSize: 18,
+          marginLeft: 0,
+          top:  responsiveHeight(0),
         },
         productWrapper: {
-          backgroundColor: "transparent",
+          backgroundColor: "white",
           padding: 5,
           //flex: 1,
-          top: 15,
-          height: 150,
+          bottom: responsiveHeight(8),
+          height: responsiveHeight(30),
         },
       
         storeNameStyles: {
@@ -163,8 +169,8 @@ export const StylesRewardsPoints = StyleSheet.create({
             width: 5,
           },
           elevation: 5,
-      
-          //top: 10,
+       top:60
+          //bottom: 10,
         },
         productNameStyle: {
           fontSize: 20,
