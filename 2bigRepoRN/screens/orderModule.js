@@ -349,6 +349,7 @@ export default function OrderModule({}) {
     console.log("feedback and ratings", textinput_Feedback, ratings);
     const newRandomKey = RandomId;
     console.log("Random ID", newRandomKey);
+  
     set(ref(db, `STOREREVIEW/${newRandomKey}`), {
       adminID: selectedItemID.admin_ID,
       orderId: selectedItemID.orderID,
@@ -357,6 +358,7 @@ export default function OrderModule({}) {
       ratings: parseFloat(ratings),
       customerFirstName: customerData.firstName,
       customerLastName: customerData.lastName,
+     
     })
       .then(async () => {
         // console.log('Test if Save to db-----'+reservationDate );

@@ -177,6 +177,7 @@ export default function DeliveredOrdersScreen() {
       ratings: parseFloat(ratings),
       customerFirstName: customerData.firstName,
       customerLastName: customerData.lastName,
+      reviewedDate:currentDate
     })
       .then(async () => {
         // console.log('Test if Save to db-----'+reservationDate );
