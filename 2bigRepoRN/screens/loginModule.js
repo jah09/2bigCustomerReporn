@@ -46,11 +46,9 @@ export default function LoginModule({ navigation, route }) {
   const onPressHandler_toMainPage = () => {
     navigation.navigate("TabNavigator");
   };
-
   const [showPassword, setShowPassword] = useState(false);
   const [visible, setVisible] = useState(true);
-  const [custData, setCusData] = useState();
-
+ // const [custData, setCusData] = useState();
   const [email, setEmail] = useState(route.params?.email || "");
   const [password, setPassword] = useState(route.params?.password || "");
 
@@ -77,15 +75,13 @@ export default function LoginModule({ navigation, route }) {
 
       return formattedDate;
     };
-
     functionsetCurrentDate();
   }, []);
 
+  const [cusID,setCustomerID]=useState();
   const [currentDate, setCurrentDate] = useState("");
-
-
+  
   const handleLogin = async () => {
-
     try {
       const auth = getAuth();
       const inputtedpassword = SHA256(password).toString();
@@ -98,10 +94,9 @@ export default function LoginModule({ navigation, route }) {
       console.log("Logged in with:", inputtedpassword);
       const customerData = await fetchCustomerData(email,inputtedpassword);
       console.log("Data:", customerData);
-  
       if (customerData) {
         await storeCustomerData(customerData);
-        await logCustomerLogin(email);
+        await logCustomerLogin(customerData);
         navigation.navigate("TabNavigator");
       } else {
         alert("No customer found with this email");
@@ -129,6 +124,8 @@ export default function LoginModule({ navigation, route }) {
     if (snapshot.exists()) {
       const customerData = snapshot.val()[Object.keys(snapshot.val())[0]];
       const storedPassword = customerData.password;
+      const customerId=customerData.cusId;
+      setCustomerID(customerId)
         console.log("line 126",storedPassword)
         console.log("line 127",inputtedpassword)
       // Compare the hashed passwords
@@ -154,15 +151,18 @@ export default function LoginModule({ navigation, route }) {
   };
   
 
-  const logCustomerLogin = async (email) => {
+  const logCustomerLogin = async (customerData) => {
+    console.log("line 153",customerData)
     const userLogId = Math.floor(Math.random() * 50000) + 100000;
     const newUserLog = userLogId;
     const logRef = ref(db, `CUSTOMERSLOG/${newUserLog}`);
     const currentDate = new Date().toISOString();
     const logData = {
-      dateLogin: currentDate,
+      date: currentDate,
       email: email,
       action: "login",
+      cusId: customerData.cusId,
+      logId: newUserLog, 
     };
     try {
       await set(logRef, logData);

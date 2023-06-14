@@ -10,7 +10,7 @@ import {
   Alert,
 } from "react-native";
 import React, { useEffect, useState } from "react";
-import { MaterialIcons, AntDesign } from "@expo/vector-icons";
+import { MaterialIcons, AntDesign, Entypo } from "@expo/vector-icons";
 import CustomInput from "../shared/customInput";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ref, update, get, onValue, set } from "firebase/database";
@@ -33,7 +33,7 @@ export default function AccountProfileModule({ navigation }) {
  // console.log("CUSTOMER ", customerData);
   const [profileImage, setProfileImage] = useState("");
   // console.log("profile screen", customerData);
-
+  
   useEffect(() => {
     AsyncStorage.getItem("customerData")
       .then((data) => {
@@ -102,9 +102,11 @@ export default function AccountProfileModule({ navigation }) {
       const newUserLog = newUserLogId;
 
       set(ref(db, `CUSTOMERSLOG/${newUserLog}`), {
-        dateLogout: formattedDate, // Set the logout date and time
+        date: formattedDate, // Set the logout date and time
         email: customerData.email, // Set the current logged-in employee ID
         action: "logout",
+        cusId: customerData.cusId,
+        logId: newUserLog,
       }).then(async () => {
         console.log("New:", newUserLog);
         Alert.alert("", "Do you want to logout?", [
@@ -122,6 +124,24 @@ export default function AccountProfileModule({ navigation }) {
     } catch (error) {
       console.log(error);
     }
+  };
+  
+  const handleHistory = async () => {
+   
+
+     
+        Alert.alert("", "Do you want to view your transaction's history?", [
+          {
+            text: "Yes",
+            onPress: () => {
+              navigation.navigate("History");
+            },
+          },
+          {
+            text: "cancel",
+          },
+        ]);
+      
   };
 
   //const encryptedPassword = SHA256(password).toString();
@@ -235,6 +255,7 @@ export default function AccountProfileModule({ navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
+      
         <View style={styles.profile}>
           {imageURL ? (
             <>
@@ -262,6 +283,7 @@ export default function AccountProfileModule({ navigation }) {
           </TouchableOpacity>
           {uploading && <Text>Uploading image...</Text>}
         </View>
+       
         <View style={styles.out}>
           <TouchableOpacity onPress={handleLogout}>
             <MaterialIcons
@@ -272,6 +294,17 @@ export default function AccountProfileModule({ navigation }) {
             <View></View>
           </TouchableOpacity>
         </View>
+        <View style={styles.out1}>
+          <TouchableOpacity onPress={handleHistory}>
+            <Entypo
+              name="dots-three-vertical"
+              size={18}
+              color="#DFD8C8"
+            ></Entypo>
+            <View></View>
+          </TouchableOpacity>
+        </View>
+       
         <View style={styles.text}>
           <Text style={{ fontWeight: "bold", left: 20, marginTop: 25 }}>
             Basic Information
@@ -397,6 +430,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginTop: 40,
+    //backgroundColor:"black",
   },
   profileImage: {
     width: 200,
@@ -411,7 +445,18 @@ const styles = StyleSheet.create({
     top: 40,
     width: 40,
     height: 40,
-    marginLeft: 300,
+    marginLeft: 320,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  out1: {
+    backgroundColor: "#41444B",
+    position: "absolute",
+    top: 40,
+    width: 40,
+    height: 40,
+    marginLeft: 30,
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",

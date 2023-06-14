@@ -6,10 +6,7 @@ import {
   TouchableOpacity,
   Image,
   SafeAreaView,
-
   ScrollView,
-
-
   ToastAndroid,
 } from "react-native";
 import { db } from "../firebaseConfig";
@@ -27,14 +24,11 @@ import { Fontisto } from "@expo/vector-icons";
 import moment from "moment";
 import { NotificationContext } from "../shared/NotificationContext";
 
-
 export default function NotificationScreen() {
-  const [readNotifications, setReadNotifications] = useState([]);
-  console.log("readNotifications:", readNotifications);
   const [currentTime, setCurrentTime] = useState(new Date());
   const { unreadCount, updateUnreadCount } = useContext(NotificationContext);
   const navigation = useNavigation();
-  console.log("unreadCount:", unreadCount);
+  //console.log("unreadCount:", unreadCount);
 
   useEffect(() => {
     async function fetchNotifications() {
@@ -44,9 +38,9 @@ export default function NotificationScreen() {
       if (customerData) {
         const customerId = customerData.cusId;
 
-        console.log("CUSTOMER:", customerId);
+        //console.log("CUSTOMER:", customerId);
         const notificationsRef = ref(db, "NOTIFICATION/");
-        console.log("NOTIF TABLE:", notificationsRef);
+        //console.log("NOTIF TABLE:", notificationsRef);
         const notificationsQuery = query(
           notificationsRef,
           orderByChild("cusId"),
@@ -57,7 +51,6 @@ export default function NotificationScreen() {
           (snapshot) => {
             if (snapshot.exists()) {
               const data = snapshot.val();
-
               const NotifInformation = Object.keys(data)
                 .map((key) => ({
                   id: key,
@@ -87,23 +80,22 @@ export default function NotificationScreen() {
               // console.log("SortedNotifications:", sortedNotifications); // Add this line
               setNotifications(sortedNotifications);
 
-
               setReadNotifications(
                 NotifInformation.filter(
-                  (notification) => notification.status === "read"
+                  (notification) => notification.status === "read" 
                 )
               );
-              console.log("READNotifInformation:", NotifInformation);
+              //console.log("READNotifInformation:", NotifInformation);
               const unreadNotifications = NotifInformation.filter(
                 (notification) => notification.status === "unread"
               );
-              console.log("UNREAD:", unreadNotifications);
+             // console.log("UNREAD:", unreadNotifications);
               updateUnreadCount(unreadNotifications.length);
 
               const scheduledNotifications = NotifInformation.filter(
                 (notification) => notification.title === "Order Reminder"
               );
-              // console.log("SCHED:", scheduledNotifications);
+             // console.log("SCHED:", scheduledNotifications);
               displayScheduledNotificationsAsToasts(scheduledNotifications);
             }
           },
@@ -123,19 +115,19 @@ export default function NotificationScreen() {
     return () => clearInterval(intervalId);
   }, []);
   const [notifications, setNotifications] = useState([]);
+  const [readNotifications, setReadNotifications] = useState([]);
+ // console.log("readNotifications:", readNotifications);
 
   // console.log("Notification:", notifications);
-
-
   const displayScheduledNotificationsAsToasts = (scheduledNotifications) => {
+    const currentDate = new Date();
+    const currentDateString = currentDate.toDateString(); // Get the date portion as a string
+  
     scheduledNotifications.forEach((notification) => {
-      const currentDate = new Date();
-
-      //console.log("CURRENT:", currentDate);
       const scheduledSentDate = new Date(notification.scheduledSent);
-      // console.log("Sched date:", scheduledSentDate);
-
-      if (currentDate >= scheduledSentDate) {
+      const scheduledDateString = scheduledSentDate.toDateString(); // Get the date portion as a string
+    // console.log("DATEEEEE:", scheduledDateString);
+      if (currentDateString === scheduledDateString) {
         ToastAndroid.showWithGravityAndOffset(
           notification.body,
           ToastAndroid.LONG,
@@ -143,10 +135,11 @@ export default function NotificationScreen() {
           0,
           200 // Adjust the Y offset as needed
         );
-
       }
     });
   };
+  
+  
 
   // const displayScheduledNotificationsAsToasts = (scheduledNotifications) => {
   //   scheduledNotifications.forEach((notification) => {
@@ -154,7 +147,6 @@ export default function NotificationScreen() {
   //     console.log("CURRENT:", currentDate);
   //     const scheduledSentDate = new Date(notification.scheduledSent);
   //     console.log("Sched date:", scheduledSentDate);
-
 
   //     if (currentDate >= scheduledSentDate) {
   //       // Display the custom toast
@@ -164,7 +156,6 @@ export default function NotificationScreen() {
   //   });
   // };
 
-  
   const handleNotificationPress = async (notification) => {
     if (notification.status === "unread") {
       const notificationRef = ref(db, `NOTIFICATION/${notification.id}`);
@@ -172,14 +163,11 @@ export default function NotificationScreen() {
       setReadNotifications([...readNotifications, notification]);
     }
 
-    console.log("NOTIFI:", notification);
-    console.log("NOTIFI:", typeof notification);
-    const orderID = notification.orderID;
-    console.log("OrderID:", orderID);
+  
 
     if (notification.orderID) {
       const orderID = notification.orderID;
-      console.log("OrderID:", orderID);
+      //console.log("OrderID:", orderID);
 
       navigation.navigate("Order", { orderID });
     } else {
@@ -191,9 +179,9 @@ export default function NotificationScreen() {
     const customerData = JSON.parse(await AsyncStorage.getItem("customerData"));
     if (customerData) {
       const customerId = customerData.cusId;
-      console.log("CUSTOMER:", customerId);
+     // console.log("CUSTOMER:", customerId);
       const notificationsRef = ref(db, "NOTIFICATION/");
-      console.log("NOTIF TABLE:", notificationsRef);
+      //console.log("NOTIF TABLE:", notificationsRef);
       const notificationsQuery = query(
         notificationsRef,
         orderByChild("cusId"),
@@ -259,6 +247,7 @@ export default function NotificationScreen() {
       );
     }
   };
+
   const handleDeleteNotification = (notificationID) => {
     setNotifications(
       notifications.filter(
@@ -280,85 +269,88 @@ export default function NotificationScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-        {notifications.length > 0 ? (
-      <ScrollView>
-        <View>
-          <Text style={styles.text1}>Notifications</Text>
-        </View>
-        <View style={{ marginLeft: 220 }}>
-          <TouchableOpacity onPress={handleClickMarkAll}>
-            <Text style={styles.text3}>Mark all as read</Text>
-          </TouchableOpacity>
-        </View>
-        {notifications
+      {notifications.length > 0 ? (
+        <ScrollView>
+          <View>
+            <Text style={styles.text1}>Notifications</Text>
+          </View>
+          <View style={{ marginLeft: 220 }}>
+            <TouchableOpacity onPress={handleClickMarkAll}>
+              <Text style={styles.text3}>Mark all as read</Text>
+            </TouchableOpacity>
+          </View>
+          {notifications
 
-          .filter((notification) => notification.title !== "Order Reminder")
+            .filter((notification) => notification.title !== "Order Reminder")
 
-          .map((notification) => (
-            <View
-              key={notification.id}
-              style={[
-                styles.notification,
+            .map((notification) => (
+              <View
+                key={notification.id}
+                style={[
+                  styles.notification,
 
-                readNotifications.includes(notification.id) &&
-                  styles.readNotification,
-
-              ]}
-            >
-              <TouchableOpacity
-                onPress={
-                  notification.status === 'read' ? () => {} : () => handleNotificationPress(notification)
-                }
+                  readNotifications.includes(notification.id) &&
+                    styles.readNotification,
+                    notification.status === "unread" && styles.unreadText,
+                    notification.status === "read" && styles.readNotification,
+                ]}
               >
-                <Text
-                  style={[
-                    styles.text,
-                    notification.status === 'unread' && styles.unreadText,
-                    notification.status === 'read' && styles.readText,
-                  ]}
+                <TouchableOpacity
+                  onPress={
+                    notification.status === "read"
+                      ? () => {}
+                      : () => handleNotificationPress(notification)
+                  }
                 >
-                  {moment(notification.notificationDate).format('MMMM Do YYYY, h:mm:ss a')}
-                </Text>
-              </TouchableOpacity>
-              <View style={{ flexDirection: 'row' }}>
-                <View style={styles.imageContainer}>
-                  <Image source={require('../assets/storeNoBG.png')} style={styles.image} />
+                  <Text
+                    style={[
+                      styles.text,
+                      notification.status === "unread" && styles.unreadText,
+                      notification.status === "read" && styles.readNotification,
+                    ]}
+                  >
+                    {moment(notification.notificationDate).format(
+                      "MMMM Do YYYY, h:mm:ss a"
+                    )}
+                  </Text>
+                </TouchableOpacity>
+                <View style={{ flexDirection: "row" }}>
+                  <View style={styles.imageContainer}>
+                    <Image
+                      source={require("../assets/storeNoBG.png")}
+                      style={styles.image}
+                    />
+                  </View>
+                  <View
+                    style={{
+                      top: 5,
+                      right: 10,
+                      width: 260,
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text style={styles.text2}>{notification.body}</Text>
+                  </View>
                 </View>
-
-                <View
-                  style={{
-                    top: 5,
-                    right: 10,
-                    width: 260,
-                    alignItems: "center",
-                  }}
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => handleDeleteNotification(notification.id)}
                 >
-
-                  <Text style={styles.text2}>{notification.body}</Text>
-                </View>
+                  <Fontisto name="trash" size={13} color="#DFD8C8" />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={() => handleDeleteNotification(notification.id)}
-              >
-                <Fontisto name="trash" size={13} color="#DFD8C8" />
-              </TouchableOpacity>
-            </View>
-          ))}
-      </ScrollView>
-
-    ) : (
-      <View>
-        <Text>No Notification</Text>
+            ))}
+        </ScrollView>
+      ) : (
+        <View
+        style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+      >
+        <Text style={styles.noNotificationText}>No Notification</Text>
       </View>
-    )}
-  </SafeAreaView>
-);
-
-    
+      )}
+    </SafeAreaView>
+  );
 }
-
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -371,7 +363,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8E2CF",
     borderRadius: 10,
     elevation: 5,
-    height: 120,
+    height: 150,
   },
   readNotification: {
     backgroundColor: "white",

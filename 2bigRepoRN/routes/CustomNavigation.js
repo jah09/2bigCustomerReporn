@@ -13,6 +13,8 @@ import RatingScreen from '../screens/ReviewRatingScreen';
 import MapScreenforDelivery from '../screens/MapForDelivery';
 import DeliveredOrdersScreen from "../screens/DeliveredOrdersScreen";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import History from "../screens/History";
+
 const Stack = createNativeStackNavigator(); // creates object for Stack Navigator
 const FirstScreenNavigator = () => {
     return (
@@ -88,6 +90,9 @@ const ThirdScreenNavigator=()=>{
               <Stack.Screen
               name="Profiles"
               component={ProfileScreen}/>
+              <Stack.Screen
+              name="History"
+              component={History}/>
           </Stack.Navigator>
       )
   }

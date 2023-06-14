@@ -85,25 +85,25 @@ export default function OrderModule({}) {
  
   
  
-  useEffect(()=>{
-    if(orderIDfrom_handleViewDriverLocation && orderInfo){
-      const order = orderInfo.find((order) => order.orderID === orderIDfrom_handleViewDriverLocation);
-      //const order = orderInfo.find((order) => order.orderID === orderIDfrom_handleViewDriverLocation);
-      if(order){
-        const orderStatus = order.order_OrderStatus;
-        console.log("Order Status:", orderStatus);  
-        if (orderStatus === "Delivered" || orderStatus === "Payment Received") {
-          // Order status is "Delivered" or "Payment Received", hide the polyline
-          setdisplayPolyline(false);
-          navigation.navigate("Maps", {displayPolyline: displayPolyline });
-        } else if (orderStatus === "Accepted") {
-          // Order status is "Accepted", show the polyline
-          setdisplayPolyline(true);
-          navigation.navigate("Maps", {displayPolyline: displayPolyline });
-        }
-      }
-    }
-   },[orderIDfrom_handleViewDriverLocation,orderInfo])
+  // useEffect(()=>{
+  //   if(orderIDfrom_handleViewDriverLocation && orderInfo){
+  //     const order = orderInfo.find((order) => order.orderID === orderIDfrom_handleViewDriverLocation);
+  //     //const order = orderInfo.find((order) => order.orderID === orderIDfrom_handleViewDriverLocation);
+  //     if(order){
+  //       const orderStatus = order.order_OrderStatus;
+  //       console.log("Order Status:", orderStatus);  
+  //       if (orderStatus === "Delivered" || orderStatus === "Payment Received") {
+  //         // Order status is "Delivered" or "Payment Received", hide the polyline
+  //         setdisplayPolyline(false);
+  //         navigation.navigate("Maps", {displayPolyline: displayPolyline });
+  //       } else if (orderStatus === "Accepted") {
+  //         // Order status is "Accepted", show the polyline
+  //         setdisplayPolyline(true);
+  //         navigation.navigate("Maps", {displayPolyline: displayPolyline });
+  //       }
+  //     }
+  //   }
+  //  },[orderIDfrom_handleViewDriverLocation,orderInfo])
    const [displayPolyline,setdisplayPolyline]=useState(true);
   //function nga mo filter if unsa ang GE CLICK NGA DRIVER'S LOCATION, E PASA DIRE ANG ORDER ID NGA GE PRESSED OG ANG DRIVER LOCATION
   const handleViewDriverLocation = (driverId, orderId) => {
